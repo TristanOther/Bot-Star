@@ -1,0 +1,27 @@
+{
+  "name": "bot-star",
+  "version": "1.0.0",
+  "description": "Another general purpose Discord bot. (Not to be confused with YAGPDB, we're completely free to use :P (That's not a dig at them, they have a very reasonable pricing model and their free tier is quite capable. I'm a big fan of YAGPDB. I 100% recommend them if you want a high quality Discord bot, this project is more for fun and is made available if anyone finds utility in it.))",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TristanOther/Bot-Star.git"
+  },
+  "keywords": [
+    "Discord",
+    "Bot"
+  ],
+  "author": "Tristan Other",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/TristanOther/Bot-Star/issues"
+  },
+  "homepage": "https://github.com/TristanOther/Bot-Star#readme",
+  "dependencies": {
+    "discord.js": "^14.15.2",
+    "mysql": "^2.18.1"
+  }
+}

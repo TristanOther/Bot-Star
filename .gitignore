@@ -1,3 +1,9 @@
+# Credentials
+credentials.cfg
+
+# Unused code.
+scrap/
+
 # Logs
 logs
 *.log
