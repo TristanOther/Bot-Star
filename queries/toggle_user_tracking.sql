@@ -1,0 +1,1 @@
+UPDATE users SET tracking_enabled = ? WHERE user_id = ?;

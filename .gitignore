@@ -1,8 +1,11 @@
-# Credentials
+# Sensitive data.
 credentials.cfg
+bot_star.db
 
 # Unused code.
 scrap/
+
+# VVV Node gitignore template VVV
 
 # Logs
 logs

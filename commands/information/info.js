@@ -3,7 +3,7 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/11/2024
-*   Last Modified: 05/11/2024
+*   Last Modified: 05/12/2024
 *
 *   This command allows users to check information about users and the server.
 */
@@ -23,16 +23,19 @@ module.exports = {
                     option.setName("target")
                         .setDescription("The user.")
                         .setRequired(false)))
-                .addSubcommand(subcommand =>
-                    subcommand
-                        .setName("server")
-                        .setDescription("Info about the server.")),
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName("server")
+                .setDescription("Info about the server.")),
 
     async execute(interaction, color) {
+        // Userinfo subcommand.
         if (interaction.options.getSubcommand() === "user") {
+            // Get the targeted guildMember, otherwise use the sender if noone was specified.
             var member = await interaction.guild.members.fetch(interaction.options.getUser("target"));
             if (!member) member = interaction.member;
 
+            // Create an embed containing information about the member.
             const embed = new EmbedBuilder()
                 .setColor(color)
                 .setAuthor({name: `Information on ${member.displayName}:`, iconURL: member.user.displayAvatarURL()})
@@ -43,12 +46,18 @@ module.exports = {
 
                     {name: "Account Created:", value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}>`, inline: true},
                     {name: "Joined Server:", value: `<t:${Math.floor(member.joinedTimestamp / 1000)}>`, inline: true},
-
                 )
                 .setTimestamp()
+            
+            // Reply to the interaction with the created embed.
             await interaction.reply({embeds: [embed]});
+
+        // Serverinfo subcommand.
         } else if (interaction.options.getSubcommand() === "server") {
+            // Get the owner of the guild.
             var guildOwner = await interaction.guild.fetchOwner();
+
+            // Create an embed containing information about the server.
             const embed = new EmbedBuilder()
                 .setColor(color)
                 .setAuthor({name: `Information on ${interaction.guild.name}:`, iconURL: interaction.guild.iconURL()})
@@ -74,6 +83,8 @@ module.exports = {
                     {name: "Owner ID:", value: String(guildOwner.id), inline: true},
                 )
                 .setTimestamp()
+
+            // Reply to the interaction with the created embed.
             await interaction.reply({embeds: [embed]});
         }
     }

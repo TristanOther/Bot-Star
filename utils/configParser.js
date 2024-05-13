@@ -3,7 +3,7 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/10/2024
-*   Last Modified: 05/11/2024
+*   Last Modified: 05/13/2024
 *
 *   An implementation of a config parser as a JS module. Why not go with an 
 *   existing library? Becasuse I'm doing this for fun and enjoy writing code
@@ -19,12 +19,9 @@ const stringUtils = require("./stringUtils.js");
 // Class for parsing a config. Allows the config to be loaded and have actions
 // run on it without recalling the parser module.
 module.exports = class Config {    
-    // Class fields.
-    static config;
-
     /*
     *   Constructor for a Config.
-    *   @param {string} path - the path to a config file.
+    *   @PARAM {string} path - the path to a config file.
     */
     constructor(path) {
         // Initialize config with default category for uncategorized fields.
@@ -90,4 +87,8 @@ module.exports = class Config {
 *   # Comment
 *   var = content
 *   var2 = content
+*
+*   # coment
+*   [section_header]
+*   var3 = content
 */
