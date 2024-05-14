@@ -3,13 +3,16 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/12/2024
-*   Last Modified: 05/13/2024
+*   Last Modified: 05/14/2024
 *
 *   This module handles processing presenceUpdate events.
 */
 
-const configParser = require("../utils/configParser.js");
-const CONFIG = new configParser("./configs/config.cfg");
+// Imports
+const path = require("path");
+const ROOT_PATH = process.env.ROOT_PATH;
+const CONFIG = JSON.parse(process.env.CONFIG);
+const dbUtils = require(path.join(ROOT_PATH, CONFIG.utils.dbUtils));
 const {Events} = require('discord.js');
 const sqlite3 = require("sqlite3").verbose();
 const fs = require("fs");
@@ -25,23 +28,27 @@ module.exports = {
 		var devices = newPresence.clientStatus ? Object.keys(newPresence.clientStatus) : [];
 		// Get the user's status.
 		var status = newPresence.activities.length > 0 ? newPresence.activities[0].state : "N/A";
-		console.log(status);
 
 		// Write entry to DB.
 
 		// Load SQL queries.
-		var logActivityQuery = fs.readFileSync('./queries/log_activity.sql', 'utf8');
+		var logActivityQuery = fs.readFileSync(path.join(ROOT_PATH, CONFIG.queries.logActivity), 'utf8');
 
 		// Open connection to database.
-		let db = new sqlite3.Database(CONFIG.get("File_Paths").db, sqlite3.OPEN_READWRITE, (err) => {
-			if (err) return console.error(err);
-			db.run(logActivityQuery, [newPresence.user.id, presence, status, parseInt(Date.now()), devices.includes('mobile') ? 1 : 0, devices.includes('desktop') ? 1 : 0, devices.includes('web') ? 1 : 0], (err) => {
-				if (err) console.error(err);
-				// Close DB.
-				db.close((err) => {
-					if (err) return console.log(err);
-				});
-			});
-		});
+        const db = new dbUtils(CONFIG.files.db);
+        await db.open();
+
+		// Write activity to database.
+		await db.run(logActivityQuery, 
+					 newPresence.user.id,
+					 presence,
+					 status,
+					 parseInt(Date.now()),
+					 devices.includes('mobile') ? 1 : 0,
+					 devices.includes('desktop') ? 1 : 0,
+					 devices.includes('web') ? 1 : 0);
+
+		// Close database connection.
+		await db.close();
 	}
 };

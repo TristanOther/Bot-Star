@@ -3,15 +3,18 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/11/2024
-*   Last Modified: 05/12/2024
+*   Last Modified: 05/13/2024
 *
 *   This command allows users to check information about users and the server.
 */
 
+// Imports
 const {SlashCommandBuilder, EmbedBuilder} = require("discord.js");
 
 module.exports = {
     global: true,
+    // Create a slash command called `info` with subcommands `user` and `server`.
+    // - `user` subcommand allows for an optional target user.
 	data: new SlashCommandBuilder()
 		.setName("info")
 		.setDescription("Get info about a user or server.")
@@ -27,7 +30,14 @@ module.exports = {
             subcommand
                 .setName("server")
                 .setDescription("Info about the server.")),
-
+    
+    /*
+    *   execute
+    *   Executes this command.
+    *   @PARAM {obj} interaction - the interaction that triggered this command.
+    *   @PARAM {string} color - the color code that embeds in this command should use.
+    *   @RETURN - None.
+    */
     async execute(interaction, color) {
         // Userinfo subcommand.
         if (interaction.options.getSubcommand() === "user") {

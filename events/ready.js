@@ -3,15 +3,17 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/10/2024
-*   Last Modified: 05/11/2024
+*   Last Modified: 05/14/2024
 *
 *   This module handles processing the ClientReady events (when the bot comes online).
 */
 
-const configParser = require("../utils/configParser.js");
-const CONFIG = new configParser("./configs/config.cfg");
+// Imports
+const path = require("path");
+const ROOT_PATH = process.env.ROOT_PATH;
+const CONFIG = JSON.parse(process.env.CONFIG);
+const dbUtils = require(path.join(ROOT_PATH, CONFIG.utils.dbUtils));
 const {Events} = require("discord.js");
-const dbUtils = require("../utils/dbUtils.js");
 const fs = require("fs");
 
 module.exports = {
@@ -19,11 +21,11 @@ module.exports = {
 	once: true,
 	async execute(client) {
 		// Open connection to database.
-        const db = new dbUtils(CONFIG.get("File_Paths").db);
+        const db = new dbUtils(CONFIG.files.db);
         await db.open();
 		// Load SQL queries.
-		var creationQuery = fs.readFileSync('./queries/table_creation.sql', 'utf8');
-		var trackedQuery = fs.readFileSync('./queries/get_tracked_users.sql', 'utf8');
+		var creationQuery = fs.readFileSync(path.join(ROOT_PATH, CONFIG.queries.createTables), 'utf8');
+		var trackedQuery = fs.readFileSync(path.join(ROOT_PATH, CONFIG.queries.getTrackedUsers), 'utf8');
 		// Initialize tables.
 		await db.exec(creationQuery);
 		// Get tracked users.

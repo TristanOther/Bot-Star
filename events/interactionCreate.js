@@ -3,22 +3,28 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/11/2024
-*   Last Modified: 05/11/2024
+*   Last Modified: 05/14/2024
 *
 *   This module handles processing interaction events.
 */
 
-const configParser = require("../utils/configParser.js");
-const COLORS = new configParser("./configs/colors.cfg");
+// Imports
+//console.log(process.env);
+//return;
+const path = require("path");
+const ROOT_PATH = process.env.ROOT_PATH;
+const CONFIG = JSON.parse(process.env.CONFIG);
+const configParser = require(path.join(ROOT_PATH, CONFIG.utils.configParser));
+const COLORS = configParser.read(path.join(ROOT_PATH, CONFIG.configs.colors));
 const {Events} = require('discord.js');
 
 module.exports = {
 	name: Events.InteractionCreate,
 	async execute(interaction) {
-		// If not a chat interaction (command), ignore this event.
+		// If not a chat interaction (slash command), ignore this event.
 		if (!interaction.isChatInputCommand()) return;
 		
-		// Get the command that was run, and error if we don't recognize it.
+		// Get the command that was run.
 		const command = interaction.client.commands.get(interaction.commandName);
 		if (!command) {
 			console.error(`No command matching ${interaction.commandName} was found.`);
@@ -26,8 +32,9 @@ module.exports = {
 		}
 
 		try {
-			// Provide the configured color for this category when running the command for use with embeds.
-			const color = Number(COLORS.get(command.data.category));
+			// Get the color for the configured command category.
+			const color = Number(COLORS.commands[command.data.category]);
+			// Execute the command.
 			await command.execute(interaction, color);
 		} catch (error) {
 			console.error(error);
