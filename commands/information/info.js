@@ -42,8 +42,8 @@ module.exports = {
         // Userinfo subcommand.
         if (interaction.options.getSubcommand() === "user") {
             // Get the targeted guildMember, otherwise use the sender if noone was specified.
-            var member = await interaction.guild.members.fetch(interaction.options.getUser("target"));
-            if (!member) member = interaction.member;
+            var user = interaction.options.getUser("target");
+            var member = user ? await interaction.guild.members.fetch(user) : interaction.member;
 
             // Create an embed containing information about the member.
             const embed = new EmbedBuilder()
@@ -56,6 +56,7 @@ module.exports = {
 
                     {name: "Account Created:", value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}>`, inline: true},
                     {name: "Joined Server:", value: `<t:${Math.floor(member.joinedTimestamp / 1000)}>`, inline: true},
+                    {name: "Bot?", value: member.user.bot ? "Yes" : "No", inline: true}
                 )
                 .setTimestamp()
             

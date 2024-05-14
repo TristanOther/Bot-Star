@@ -112,7 +112,7 @@ module.exports = {
 
             // Get the targeted guildMember, otherwise use the sender if noone was specified.
             var user = interaction.options.getUser("target");
-            if (!user) user = interaction.user;
+            var member = user ? await interaction.guild.members.fetch(user) : interaction.member;
             
             //Functions
             //Returns the input UNIX timestamp rounded up to the nearest whole minute.
@@ -143,9 +143,8 @@ module.exports = {
             }
 
             // Query activity data for the specified user for the past 24 hours.
-            var activity = await db.all(getActivityQuery, user.id);
+            var activity = await db.all(getActivityQuery, member.id);
             await db.close();
-            console.log(activity);
             if (!activity || activity.length <= 0) return await interaction.reply({embeds: [new EmbedBuilder().setColor(color).setDescription("No tracking data avalible for this user.")]}); //Error if no activity data.
             var statuses = {};
             //Loop throgh every found activity log for the user.
@@ -221,7 +220,7 @@ module.exports = {
             //Construct and reply to interaction with embed.
             var embed = new EmbedBuilder()
             .setTitle('Activity in the past 24hr:')
-            .setAuthor({name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL()})
+            .setAuthor({name: member.user.tag, iconURL: member.user.displayAvatarURL()})
             .setColor(color)
             .addFields(
                 {name: `Presence (ET):`, value: content, inline: true},
