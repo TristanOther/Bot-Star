@@ -3,7 +3,7 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/11/2024
-*   Last Modified: 05/14/2024
+*   Last Modified: 05/15/2024
 *
 *   This module handles processing interaction events.
 */
@@ -11,11 +11,7 @@
 // Imports
 //console.log(process.env);
 //return;
-const path = require("path");
-const ROOT_PATH = process.env.ROOT_PATH;
-const CONFIG = JSON.parse(process.env.CONFIG);
-const configParser = require(path.join(ROOT_PATH, CONFIG.utils.configParser));
-const COLORS = configParser.read(path.join(ROOT_PATH, CONFIG.configs.colors));
+const COLORS = JSON.parse(process.env.COLOR_CONFIG);
 const {Events} = require('discord.js');
 
 module.exports = {

@@ -3,7 +3,7 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/10/2024
-*   Last Modified: 05/14/2024
+*   Last Modified: 05/15/2024
 *
 *   This is the main entrypoint for Bot*.
 */
@@ -21,6 +21,8 @@ process.env.ROOT_PATH = ROOT_PATH;
 const CONFIG = configParser.read("./configs/config.cfg");
 process.env.CONFIG = JSON.stringify(CONFIG);
 const CREDENTIALS = configParser.read(path.join(ROOT_PATH, CONFIG.configs.credentials));
+const COLORS = configParser.read(path.join(ROOT_PATH, CONFIG.configs.colors));
+process.env.COLOR_CONFIG = JSON.stringify(COLORS);
 
 // Global variables.
 const BOT_TOKEN = CREDENTIALS.credentials.token;

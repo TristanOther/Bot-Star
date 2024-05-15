@@ -285,10 +285,10 @@ module.exports = {
             context.fillStyle = '#ffffff';
             context.fillText(`${interaction.member.displayName}!`, pfp.width + 40, 100);
             // Create the image attachment.
-            const attachment = new AttachmentBuilder(await canvas.encode('png'), { name: 'profile-image.png' });
+            const attachment = new AttachmentBuilder(await canvas.encode('png'), { name: 'profile-image.png' });*/
             var img = new Image.UserCard(member, "Activity Log (24hr)");
             await img.init();
-            var attachment = await img.getAttachment();*/
+            var attachment = await img.getAttachment();
 
             //Construct and reply to interaction with embed.
             var embed = new EmbedBuilder()

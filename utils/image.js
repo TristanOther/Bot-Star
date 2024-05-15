@@ -14,6 +14,7 @@
 // Imports
 const Canvas = require('@napi-rs/canvas');
 const {AttachmentBuilder} = require("discord.js");
+const COLORS = JSON.parse(process.env.COLOR_CONFIG);
 
 // Base class for image manipulation.
 class Image {
@@ -123,7 +124,7 @@ class Image {
         // Restore the context from before starting.
         this.context.restore();
         // Draw border if applicable.
-        if (border) this.drawCircle((image.width / 2) + x, (image.height / 2) + y, (image.width / 2) + border.thickness, border.color, border.thickness);
+        if (border) this.drawCircle((image.width / 2) + x, (image.height / 2) + y, (image.width / 2) + (border.thickness / 2), border.color, border.thickness);
     }
 
     /*
@@ -196,29 +197,11 @@ class UserCard extends Image {
     async init() {
         // Draw the background.
         await super.setBackground("#29292e", "#202020", 20);
-        // Get the color for the status outline on the user's PFP.
-        var color;
-        if (this.member.presence) {
-            switch(this.member.presence.status) {
-                case "online":
-                    color = "#0c9439";
-                    break;
-                case "idle":
-                    color = "#d1b31f";
-                    break;
-                case "dnd":
-                    color = "#c4281a";
-                    break;
-                default:
-                    color = false;
-                    break;
-            }
-        }
         // Add the user's profile picture.
-        if (color) {
-            await super.drawCircleImageBorder(this.member.user.displayAvatarURL(), 20, 20, color, 5);
+        if (this.member.presence) {
+            await super.drawCircleImageBorder(this.member.user.displayAvatarURL(), 25, 25, COLORS.status[this.member.presence.status], 5);
         } else {
-            await super.drawCircleImage(this.member.user.displayAvatarURL(), 20, 20);
+            await super.drawCircleImage(this.member.user.displayAvatarURL(), 25, 25);
         }
     }
 }

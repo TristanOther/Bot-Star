@@ -3,7 +3,7 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/10/2024
-*   Last Modified: 05/14/2024
+*   Last Modified: 05/15/2024
 *
 *   An implementation of a config parser as a JS module. Why not go with an 
 *   existing library? Because I'm doing this for fun and enjoy writing code
@@ -53,7 +53,7 @@ exports.read = (path) => {
             } else {
                 let args = line.split("=");
                 if (args.length != 2) throw new Error(`Invalid line in config. Line ${cur_line} contains an invalid assignment structure ${line}.`);
-                config[current_category][args[0].trim()] = args[1].trim();
+                config[current_category][args[0].trim()] = stringUtils.unquote(args[1].trim());
             }
             // Increment current line.
             cur_line++;
