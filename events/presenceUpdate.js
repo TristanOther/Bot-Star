@@ -20,6 +20,8 @@ const fs = require("fs");
 module.exports = {
 	name: Events.PresenceUpdate,
 	async execute(oldPresence, newPresence) {
+		// Stop bot from crashing if a presence updates while booting.
+		if (!newPresence.client.activityTrackedUsers) return;
 		// Check if the user has activity tracking enabled.
 		if (!newPresence.client.activityTrackedUsers.includes(newPresence.user.id)) return;
 		// Get the user's presence.
