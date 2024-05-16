@@ -1,0 +1,1 @@
+SELECT DISTINCT guild_id FROM counters;

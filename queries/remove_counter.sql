@@ -1,0 +1,1 @@
+DELETE FROM counters WHERE guild_id = ? AND counter_type = ?;

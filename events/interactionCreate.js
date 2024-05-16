@@ -9,8 +9,6 @@
 */
 
 // Imports
-//console.log(process.env);
-//return;
 const COLORS = JSON.parse(process.env.COLOR_CONFIG);
 const {Events} = require('discord.js');
 

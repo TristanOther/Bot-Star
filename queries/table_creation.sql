@@ -12,3 +12,9 @@ CREATE TABLE IF NOT EXISTS activity_logs(
     desktop BOOLEAN NOT NULL CHECK(desktop IN (0, 1)),
     web BOOLEAN NOT NULL CHECK(web IN (0, 1))
 );
+
+CREATE TABLE IF NOT EXISTS counters(
+    guild_id TEXT NOT NULL,
+    channel_id TEXT NOT NULL,
+    counter_type TEXT NOT NULL CHECK(counter_type = "members" OR counter_type = "bots" OR counter_type = "all")
+)

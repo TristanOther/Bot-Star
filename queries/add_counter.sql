@@ -1,0 +1,1 @@
+INSERT INTO counters(guild_id, channel_id, counter_type) VALUES (?, ?, ?);
