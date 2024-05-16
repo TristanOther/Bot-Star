@@ -219,74 +219,7 @@ module.exports = {
                 ...
             */
 
-            /*const applyText = (canvas, text) => {
-                const context = canvas.getContext('2d');
-                let fontSize = 70;
-            
-                do {
-                    context.font = `${fontSize -= 10}px sans-serif`;
-                } while (context.measureText(text).width > canvas.width - 300);
-            
-                return context.font;
-            };
-
-            // Create the canvas and get the drawing context.
-            const canvas = Canvas.createCanvas(800, 300);
-            const context = canvas.getContext('2d');
-            // Create the background.
-            context.fillStyle = "#29292e";
-            context.fillRect(0, 0, 800, 300);
-            // Add an outline to the background.
-            context.strokeStyle = "#202020";
-            context.lineWidth = 20;
-            context.strokeRect(0, 0, 800, 300);
-            // Attach the user's profile picture.
-            // Load the PFP.
-            const pfp = await Canvas.loadImage(member.user.displayAvatarURL());
-            // Create a circle around the PFP.
-            context.save();
-            context.beginPath();
-            context.arc((pfp.width / 2) + 20, (pfp.height / 2) + 20, (pfp.width / 2), 0, Math.PI * 2, true);
-            context.closePath();
-            context.clip();
-            // Draw the constrained PFP.
-            context.drawImage(pfp, 20, 20, pfp.width, pfp.height);
-            context.restore();
-            // Draw activity circle around the user.
-            var color;
-            if (member.presence) {
-                switch(member.presence.status) {
-                    case "online":
-                        color = "#0c9439";
-                        break;
-                    case "idle":
-                        color = "#d1b31f";
-                        break;
-                    case "dnd":
-                        color = "#c4281a";
-                        break;
-                    default:
-                        color = null;
-                        break;
-                }
-                if (color != null) {
-                    context.lineWidth = 5;
-                    context.strokeStyle = color;
-                    context.beginPath();
-                    context.arc((pfp.width / 2) + 20, (pfp.height / 2) + 20, (pfp.width / 2) + 2.5, 0, Math.PI * 2, true);
-                    context.stroke();
-                }
-            }
-            // Attach username text.
-            context.font = '28px sans-serif';
-            context.fillStyle = '#ffffff';
-            context.fillText("User Activity (24hr):", pfp.width + 40, 40);
-            context.font = applyText(canvas, `${interaction.member.displayName}`);
-            context.fillStyle = '#ffffff';
-            context.fillText(`${interaction.member.displayName}!`, pfp.width + 40, 100);
-            // Create the image attachment.
-            const attachment = new AttachmentBuilder(await canvas.encode('png'), { name: 'profile-image.png' });*/
-            var img = new Image.UserCard(member, "Activity Log (24hr)");
+            var img = new Image.UserActivityCard(member, "24hr");
             await img.init();
             var attachment = await img.getAttachment();
 

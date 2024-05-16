@@ -77,6 +77,32 @@ class Image {
     }
 
     /*
+    *   drawPillBody
+    *   Draws a "pill" shape, which in geometry seems to go by a million different names.
+    *   @PARAM {integer} x - the x coordinate to draw the pill at (imaginary top left corner that's cut off by the fillet).
+    *   @PARAM {integer} y - the y coordinate to draw the pill at (imaginary top left corner that's cut off by the fillet).
+    *   @PARAM {integer} w - the width of the pill.
+    *   @PARAM {integer} h - the height of the pill.
+    *   @PARAM {string} color - a hex code color to draw the pill in.
+    */
+    async drawPillBody(x, y, w, h, color) {
+        // Save the current context.
+        this.context.save();
+        // Set the color.
+        this.context.fillStyle = color;
+        // Calculate the radius.
+        const radius = w / 2;
+        // Draw the first semicircle. (A half arc could be used, but since the rectangle covers it we can cheat and use a circle.)
+        await this.drawCircle(x + radius, y + radius, radius, color);
+        // Draw the rectangle.
+        await this.drawRectangle(x, y + radius, w, h, color);
+        // Draw the second semicircle.
+        await this.drawCircle(x + radius, y + radius + h, radius, color);
+        // Restore the context from before starting.
+        this.context.restore();
+    }
+
+    /*
     *   drawCircle
     *   Draws a circle to the canvas.
     *   @PARAM {integer} x - the x coordinate of the center of the circle.
@@ -215,45 +241,21 @@ class Image {
     *   @PARAM {integer} maxWidth - the maximum width of the loading bar (may be scaled down slightly to fit data nicely).
     *   @PARAM {integer} height - the height of the loading bar.
     *   @PARAM {array} colorData - array of hex codes for the colors to be drawn in each segment.
-    *   @PARAM {integer} subSegments - an optional number representing the number of sub-segments per larger segment there should be.
-    *                                  If this option is provided a value the colorData will be split into n/subSegments larger segments,
-    *                                  with subSegments sub-segments to each larger segment. If too much color data is provided the beginning 
-    *                                  will be truncated.
-    *   @PARAM {string} borderColor - the color of the border lines on the loading bar (default black).
+    *   @PARAM {integer} spacing - the spacing between the segments of the loading bar (default = 2).
     *   @RETURN - None.
     */
-    async drawLoadingBar(x, y, maxWidth, height, colorData, subSegments = false, borderColor = "#000000") {
-        const borderThickness = 7;
-        const subBorderThickness = 2;
+    async drawLoadingBar(x, y, maxWidth, height, colorData, spacing = 5) {
         // Remove from the overall width any extra length that won't be needed.
-        var width = maxWidth - ((maxWidth - borderThickness) % colorData.length); // -5 accounts for there being 1 more outline border edge than segment.
-        // Draw the background rectangle.
-        await this.drawRectangle(x, y, width, height, borderColor);
-        // If subsegments are enabled:
-        if (subSegments) {
-            // Trim data off the beginning if necessary so the segments can be drawn evenly.
-            var trimAmount = colorData.length % subSegments;
-            colorData = colorData.slice(trimAmount);
-            // Draw segments.
-            var segmentWidth = colorData.length / subSegments;
-            for (i = 0; i < colorData.length; i++) {
-                let subSegmentThickness = ((width - ((((subSegments * segmentWidth) - 1) * subBorderThickness) + (segmentWidth * borderThickness))) / colorData.length);
-                let curSegment = Math.floor(i / segmentWidth); // How many segments (not sub-segments) have been drawn.
-                let tempY = y + borderThickness;
-                let tempX = (x + borderThickness) + // Shift for initial thick border (left outer boarder).
-                            (curSegment * borderThickness) + // Shift for current large inner borders (segment border).
-                            ((i - curSegment) * subBorderThickness) + // Shift for subsegment borders.
-                            (i * subSegmentThickness); // Shift for segment fill-in.
-                await this.drawRectangle(tempX, tempY, subSegmentThickness, (height - (borderThickness * 2)), colorData[i]);
-
-            }
-        // Otherwise just draw each segment.
-        } else {
-            for (i = 0; i < colorData.length; i++) {
-                let tempY = y + borderThickness;
-                let tempX = (x + borderThickness) + (i * ((width - borderThickness) / colorData.length));
-                await this.drawRectangle(tempX, tempY, (((width - borderThickness) / colorData.length) - borderThickness), (height - (borderThickness * 2)), colorData[i]);
-            }
+        const extraWidth = (maxWidth + spacing) % colorData.length; // +2 accounts for there being n-1 gaps for n segments.
+        const adjWidth = maxWidth - extraWidth;
+        // Shift the bar over to compensate for missing width.
+        x += Math.ceil(extraWidth / 2);
+        // Calculate the width of each segment.
+        const segmentWidth = (adjWidth / colorData.length) - spacing;
+        // Draw segments.
+        for (i = 0; i < colorData.length; i++) {
+            let iX = x + (i * (segmentWidth + spacing));
+            await this.drawPillBody(iX, y, segmentWidth, height, colorData[i]);
         }
     }
 
@@ -302,29 +304,57 @@ class UserCard extends Image {
             await super.drawCircleImage(this.member.user.displayAvatarURL(), 25, 25);
         }
         // Draw the header text.
-        await super.drawText("User Activity (24hr):", 180, 55, 400);
+        await super.drawText(this.title, 180, 55, 400);
         // Draw username.
         await super.drawText(this.member.displayName, 180, 135, 720);
         // Draw user ID.
         await super.drawText(`id:${this.member.id}`, 590, 40, 200);
+    }
+}
+
+// Class for image manipulation of a user-activity card.
+class UserActivityCard extends UserCard {
+    /*
+    *   Constructor for a UserActivityCard.
+    *   @PARAM {GuildMember} member - the member the card will be created for.
+    *   @PARAM {string} timePeriod - the duration of time this card is for.
+    */
+    constructor(member, timePeriod) {
+        super(member, `User Activity ${timePeriod}:`);
+    }
+
+    /*
+    *   init
+    *   Initializes this UserActivityCard by drawing on the UserCard template.
+    *   @RETURN - None.
+    */
+    async init() {
+        // Draw the UserCard template.
+        await super.init();
         // Draw the activity bar.
-        await super.drawLoadingBar(20, 180, 760, 80, [COLORS.status.online, COLORS.status.idle, COLORS.status.dnd, COLORS.status.idle, COLORS.status.online,
-                                                      COLORS.status.dnd, COLORS.status.online, COLORS.status.idle, COLORS.status.online, COLORS.status.dnd,
-                                                      COLORS.status.idle, COLORS.status.idle, COLORS.status.dnd, COLORS.status.idle, COLORS.status.online,
-                                                      COLORS.status.dnd, COLORS.status.dnd, COLORS.status.dnd, COLORS.status.online, COLORS.status.online,
-                                                      COLORS.status.online, COLORS.status.idle, COLORS.status.dnd, COLORS.status.idle, COLORS.status.online,
-                                                      COLORS.status.dnd, COLORS.status.online, COLORS.status.idle, COLORS.status.online, COLORS.status.dnd,
-                                                      COLORS.status.idle, COLORS.status.idle, COLORS.status.dnd, COLORS.status.idle, COLORS.status.online,
-                                                      COLORS.status.dnd, COLORS.status.dnd, COLORS.status.dnd, COLORS.status.online, COLORS.status.online,
-                                                      COLORS.status.online, COLORS.status.idle, COLORS.status.dnd, COLORS.status.idle, COLORS.status.online,
-                                                      COLORS.status.dnd, COLORS.status.online, COLORS.status.idle, COLORS.status.online, COLORS.status.dnd,
-                                                      COLORS.status.idle, COLORS.status.idle, COLORS.status.dnd, COLORS.status.idle, COLORS.status.online,
-                                                      COLORS.status.dnd, COLORS.status.dnd, COLORS.status.dnd, COLORS.status.online, COLORS.status.online], 5);
+        await super.drawLoadingBar(10, 190, 780, 70, 
+            [COLORS.status.online,  COLORS.status.idle,    COLORS.status.idle,    COLORS.status.offline, COLORS.status.offline, COLORS.status.offline,
+             COLORS.status.dnd,     COLORS.status.idle,    COLORS.status.dnd,     COLORS.status.offline, COLORS.status.idle,    COLORS.status.online,
+             COLORS.status.online,  COLORS.status.online,  COLORS.status.dnd,     COLORS.status.idle,    COLORS.status.dnd,     COLORS.status.dnd,
+             COLORS.status.dnd,     COLORS.status.dnd,     COLORS.status.online,  COLORS.status.offline, COLORS.status.offline, COLORS.status.offline,
+             COLORS.status.online,  COLORS.status.idle,    COLORS.status.online,  COLORS.status.offline, COLORS.status.offline, COLORS.status.idle,
+             COLORS.status.idle,    COLORS.status.idle,    COLORS.status.dnd,     COLORS.status.online,  COLORS.status.offline, COLORS.status.offline,
+             COLORS.status.offline, COLORS.status.online,  COLORS.status.online,  COLORS.status.online,  COLORS.status.dnd,     COLORS.status.offline,
+             COLORS.status.idle,    COLORS.status.idle,    COLORS.status.offline, COLORS.status.offline, COLORS.status.offline, COLORS.status.dnd,
+             COLORS.status.online,  COLORS.status.online,  COLORS.status.dnd,     COLORS.status.offline, COLORS.status.online,  COLORS.status.offline,
+             COLORS.status.idle,    COLORS.status.online,  COLORS.status.dnd,     COLORS.status.online,  COLORS.status.online,  COLORS.status.offline,
+             COLORS.status.dnd,     COLORS.status.idle,    COLORS.status.dnd,     COLORS.status.online,  COLORS.status.online,  COLORS.status.offline,
+             COLORS.status.idle,    COLORS.status.idle,    COLORS.status.idle,    COLORS.status.offline, COLORS.status.offline, COLORS.status.idle,
+             COLORS.status.offline, COLORS.status.idle,    COLORS.status.online,  COLORS.status.dnd,     COLORS.status.offline, COLORS.status.dnd,
+             COLORS.status.online,  COLORS.status.offline, COLORS.status.dnd,     COLORS.status.idle,    COLORS.status.offline, COLORS.status.offline,
+             COLORS.status.online,  COLORS.status.idle,    COLORS.status.dnd,     COLORS.status.dnd,     COLORS.status.offline, COLORS.status.online,
+             COLORS.status.idle,    COLORS.status.idle,    COLORS.status.dnd,     COLORS.status.idle,    COLORS.status.offline, COLORS.status.offline], 3);
     }
 }
 
 // Export classes.
 module.exports = {
     Image: Image,
-    UserCard: UserCard
+    UserCard: UserCard,
+    UserActivityCard: UserActivityCard,
 };
