@@ -3,7 +3,6 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/10/2024
-*   Last Modified: 05/15/2024
 *
 *   Util modules for working with strings.
 */

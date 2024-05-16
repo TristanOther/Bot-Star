@@ -3,7 +3,6 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/13/2024
-*   Last Modified: 05/15/2024
 *
 *   This is a util module for working with SQLITE3. Creating an instance of this class
 *   allows SQLITE3 to be used asynchronously so you don't have to juggle nested DB calls

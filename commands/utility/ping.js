@@ -3,7 +3,7 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/10/2024
-*   Last Modified: 05/11/2024
+
 *
 *   This command currently acts as a simple ping tester.
 */

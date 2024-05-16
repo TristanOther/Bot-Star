@@ -3,7 +3,6 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/15/2024
-*   Last Modified: 05/15/2024
 *
 *   This is a util module allows for updating the bot's counters (member counters etc.)
 */

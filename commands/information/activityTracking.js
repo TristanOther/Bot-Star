@@ -3,7 +3,6 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/12/2024
-*   Last Modified: 05/15/2024
 *
 *   This command allows users to enable/disable activity tracking for themselves.
 */
