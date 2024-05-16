@@ -26,3 +26,15 @@ exports.isWhitespace = (str) => {
 exports.unquote = (str) => {
     return str.match(/^["|'].*["|']$/) ? str.slice(1, -1) : str;
 }
+
+/*
+*   getLongestStr
+*   Finds the array index of the longest string in an array.
+*   @PARAM {array} arr - the array of input strings.
+*   @RETURN {integer} - the index of the longest string.
+*/
+exports.getLongestStr = (arr) => {
+    return arr.reduce((maxIndex, currentString, currentIndex, array) => {
+        return currentString.length > array[maxIndex].length ? currentIndex : maxIndex;
+    }, 0);
+}

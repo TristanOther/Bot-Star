@@ -11,9 +11,13 @@
 */
 
 // Imports
+const path = require("path");
+const ROOT_PATH = process.env.ROOT_PATH;
 const Canvas = require('@napi-rs/canvas');
 const {AttachmentBuilder} = require("discord.js");
+const CONFIG = JSON.parse(process.env.CONFIG);
 const COLORS = JSON.parse(process.env.COLOR_CONFIG);
+const stringUtils = require(path.join(ROOT_PATH, CONFIG.utils.stringUtils));
 
 // Base class for image manipulation.
 class Image {
@@ -219,17 +223,19 @@ class Image {
     *   @PARAM {integer} y - y coordinate to place text (bottom left corner).
     *   @PARAM {integer} maxWidth - the maximum width the text can take up.
     *   @PARAM {string} color - the color of the text (default white).
+    *   @PARAM {boolean} autosize - whether or not to autosize the text. When off
+    *                               context management is the caller's responsibility.
     */
-    async drawText(text, x, y, maxWidth, color = "#ffffff") {
+    async drawText(text, x, y, maxWidth, color = "#ffffff", autosize = true) {
         // Save the current context.
-        this.context.save();
+        if (autosize) this.context.save();
         // Set the text color and size within the context.
-        await this.sizeText(text, maxWidth);
+        if (autosize) await this.sizeText(text, maxWidth);
         this.context.fillStyle = color;
         // Draw the text.
         this.context.fillText(text, x, y);
         // Restore the context from before starting.
-        this.context.restore();
+        if (autosize) this.context.restore();
     }
 
     /*
@@ -240,21 +246,38 @@ class Image {
     *   @PARAM {integer} maxWidth - the maximum width of the loading bar (may be scaled down slightly to fit data nicely).
     *   @PARAM {integer} height - the height of the loading bar.
     *   @PARAM {array} colorData - array of hex codes for the colors to be drawn in each segment.
-    *   @PARAM {integer} spacing - the spacing between the segments of the loading bar (default = 2).
+    *   @PARAM {integer} segmentSpacing - the spacing between the segments of the loading bar (default = 5).
+    *   @PARAM {array} legend - optional array of values to place as legend markers along the progress bar.
     *   @RETURN - None.
     */
-    async drawLoadingBar(x, y, maxWidth, height, colorData, spacing = 5) {
+    async drawLoadingBar(x, y, maxWidth, height, colorData, segmentSpacing = 5, legend = false) {
         // Remove from the overall width any extra length that won't be needed.
-        const extraWidth = (maxWidth + spacing) % colorData.length; // +2 accounts for there being n-1 gaps for n segments.
+        const extraWidth = (maxWidth + segmentSpacing) % colorData.length; // +2 accounts for there being n-1 gaps for n segments.
         const adjWidth = maxWidth - extraWidth;
         // Shift the bar over to compensate for missing width.
         x += Math.ceil(extraWidth / 2);
         // Calculate the width of each segment.
-        const segmentWidth = (adjWidth / colorData.length) - spacing;
+        const segmentWidth = (adjWidth / colorData.length) - segmentSpacing;
         // Draw segments.
         for (i = 0; i < colorData.length; i++) {
-            let iX = x + (i * (segmentWidth + spacing));
+            let iX = x + (i * (segmentWidth + segmentSpacing));
             await this.drawPillBody(iX, y, segmentWidth, height, colorData[i]);
+        }
+        // Draw legend.
+        if (legend) {
+            const textWidth = 40;
+            // Save the current context.
+            this.context.save();
+            // Get the text width for the longest string, and set the context to that width.
+            const longest = legend[stringUtils.getLongestStr(legend)];
+            this.sizeText(longest, textWidth);
+            // Draw the text in the set font size.
+            for (i = 0; i < legend.length; i++) {
+                let iX = x + (i * Math.floor(adjWidth / (legend.length - 1))) - (textWidth / 2);
+                await this.drawText(legend[i], iX, y + height + 20, textWidth, "#ffffff", false);
+            }
+            // Restore the context from before starting.
+            this.context.restore();
         }
     }
 
@@ -331,7 +354,7 @@ class UserActivityCard extends UserCard {
         // Draw the UserCard template.
         await super.init();
         // Draw the activity bar.
-        await super.drawLoadingBar(10, 190, 780, 70, 
+        await super.drawLoadingBar(20, 190, 760, 70, 
             [COLORS.status.online,  COLORS.status.idle,    COLORS.status.idle,    COLORS.status.offline, COLORS.status.offline, COLORS.status.offline,
              COLORS.status.dnd,     COLORS.status.idle,    COLORS.status.dnd,     COLORS.status.offline, COLORS.status.idle,    COLORS.status.online,
              COLORS.status.online,  COLORS.status.online,  COLORS.status.dnd,     COLORS.status.idle,    COLORS.status.dnd,     COLORS.status.dnd,
@@ -347,7 +370,8 @@ class UserActivityCard extends UserCard {
              COLORS.status.offline, COLORS.status.idle,    COLORS.status.online,  COLORS.status.dnd,     COLORS.status.offline, COLORS.status.dnd,
              COLORS.status.online,  COLORS.status.offline, COLORS.status.dnd,     COLORS.status.idle,    COLORS.status.offline, COLORS.status.offline,
              COLORS.status.online,  COLORS.status.idle,    COLORS.status.dnd,     COLORS.status.dnd,     COLORS.status.offline, COLORS.status.online,
-             COLORS.status.idle,    COLORS.status.idle,    COLORS.status.dnd,     COLORS.status.idle,    COLORS.status.offline, COLORS.status.offline], 3);
+             COLORS.status.idle,    COLORS.status.idle,    COLORS.status.dnd,     COLORS.status.idle,    COLORS.status.offline, COLORS.status.offline],
+             3, ["12 am", "6 am", "12 pm", "6 pm", "12 pm"]);
     }
 }
 
