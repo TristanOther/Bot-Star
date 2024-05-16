@@ -41,7 +41,7 @@ module.exports = {
 			client.counters[counter.counter_type].push({"guild": counter.guild_id, "channel": counter.channel_id});
 			var guild = await client.guilds.cache.find(g => g.id == counter.guild_id);
 			var channel = await guild.channels.cache.find(c => c.id == counter.channel_id);
-			await counterUtils.updateType(guild, channel, counter.counter_type);
+			await counterUtils.updateCounter(guild, channel, counter.counter_type);
 		});
 		// Close DB and log bot start.
 		await db.close();

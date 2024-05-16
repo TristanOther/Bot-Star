@@ -14,7 +14,6 @@ const path = require("path");
 const ROOT_PATH = process.env.ROOT_PATH;
 const CONFIG = JSON.parse(process.env.CONFIG);
 
-
 /*
 *   removeCounter
 *   Function for removing the counter from a name.
@@ -33,63 +32,22 @@ function removeCounter(str) {
 *   as its counter value.
 *   @PARAM {Guild} guild - the server to edit the counter in.
 *   @PARAM {GuildChannel} channel - the channel to edit the counter of.
-*   @PARAM {integer} value - the value to set the counter to.
+*   @PARAM {string} type - the type of counter being updated.
 *   @RETURN - None.
 */
-async function updateCounter(guild, channel, value) {
+async function updateCounter(guild, channel, type) {
+    var count;
+    if (type == "members") {
+        count = await guild.members.cache.filter(m => !m.user.bot).size;
+    } else if (type == "bots") {
+        count = await guild.members.cache.filter(m => m.user.bot).size;
+    } else if (type == "all") {
+        count = await guild.members.cache.size;
+    }
     try {
-        await guild.channels.edit(channel.id, {name: `${removeCounter(channel.name)}: ${value}`});
+        await guild.channels.edit(channel.id, {name: `${removeCounter(channel.name)}: ${count}`});
     } catch (err) {
         if (err) console.error(err);
-    }
-}
-
-/*
-*   updateUserCounter, updateBotCounter, updateMemberCounter
-*   These functions update member counters within a Discord server.
-*   @PARAM {Guild} guild - the server to edit the counter in.
-*   @PARAM {GuildChannel} channel - the channel to edit the counter of.
-*   @RETURN - None.
-*/
-// Counter updater for only user members.
-async function updateUserCounter (guild, channel) {
-    // Get the member count of the server.
-    var count = guild.members.cache.filter(m => !m.user.bot).size;
-    // Update the counter.
-    await updateCounter(guild, channel, count);
-}
-
-// Counter updater for only bot members.
-async function updateBotCounter (guild, channel) {
-    // Get the bot count of the server.
-    var count = guild.members.cache.filter(m => m.user.bot).size;
-    // Update the counter.
-    await updateCounter(guild, channel, count);
-}
-
-// Counter updater for all members.
-async function updateMemberCounter (guild, channel) {
-    // Get the member count of the server.
-    var count = guild.members.cache.size;
-    // Update the counter.
-    await updateCounter(guild, channel, count);
-}
-
-/*
-*   updateType
-*   Parses the type and chooses the appropriate updater to update the counter.
-*   @PARAM {Guild} guild - the server to edit the counter in.
-*   @PARAM {GuildChannel} channel - the channel to edit the counter of.
-*   @PARAM {string} type - the type of this counter.
-*   @RETURN - None.
-*/
-async function updateType (guild, channel, type) {
-    if (type == "members") {
-        await updateUserCounter(guild, channel);
-    } else if (type == "bots") {
-        await updateBotCounter(guild, channel);
-    } else if (type == "all") {
-        await updateMemberCounter(guild, channel);
     }
 }
 
@@ -101,7 +59,7 @@ async function updateType (guild, channel, type) {
 *   @PARAM {GuildChannel} newChannel - the new counter channel.
 *   @PARAM {string} type - the type of this counter.
 */
-async function swapChannel (guild, oldChannel, newChannel, type) {
+async function swapChannel(guild, oldChannel, newChannel, type) {
     // Remove the counter from the old channel name.
     try {
         await guild.channels.edit(oldChannel.id, {name: removeCounter(oldChannel.name)});
@@ -109,13 +67,7 @@ async function swapChannel (guild, oldChannel, newChannel, type) {
         if (err) console.error(err);
     }
     // Add the counter to the new channel.
-    if (type == "members") {
-        await updateUserCounter(guild, newChannel);
-    } else if (type == "bots") {
-        await updateBotCounter(guild, newChannel);
-    } else if (type == "all") {
-        await updateMemberCounter(guild, newChannel);
-    }
+    await updateCounter(guild, newChannel, type);
 }
 
 /*
@@ -137,16 +89,13 @@ async function refreshCounters(guild, counters, db) {
         } catch (err) {
             if (err) console.error(err);
         }
-        await updateType(guild, channel, counterType);
+        await updateCounter(guild, channel, counterType);
     }
 }
 
 // Export functions.
 module.exports = {
-    updateUserCounter: updateUserCounter,
-    updateBotCounter: updateBotCounter,
-    updateMemberCounter: updateMemberCounter,
-    updateType: updateType,
+    updateCounter: updateCounter,
     swapChannel: swapChannel,
     removeCounter: removeCounter,
     refreshCounters: refreshCounters,

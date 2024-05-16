@@ -119,7 +119,7 @@ module.exports = {
             await db.close();
             // Perform the initial update on the new counter.
             var oldName = channel.name;
-            await counterUtils.updateType(interaction.guild, channel, counterType);
+            await counterUtils.updateCounter(interaction.guild, channel, counterType);
             // Create and send embed confirming creation.
             const embed = new EmbedBuilder()
                 .setTitle('COUNTER CREATED')
