@@ -97,7 +97,7 @@ async function updateType (guild, channel, type) {
 *   swapChannel
 *   Swaps the channel a counter is on.
 *   @PARAM {Guild} guild - the server to swap the counter in.
-*   @PARAM {GuildChannel} oldchannel - the that's currently a counter.
+*   @PARAM {GuildChannel} oldchannel - the channel that's currently a counter.
 *   @PARAM {GuildChannel} newChannel - the new counter channel.
 *   @PARAM {string} type - the type of this counter.
 */
