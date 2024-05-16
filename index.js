@@ -3,7 +3,6 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/10/2024
-*   Last Modified: 05/15/2024
 *
 *   This is the main entrypoint for Bot*.
 */

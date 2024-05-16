@@ -3,7 +3,6 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/10/2024
-*   Last Modified: 05/14/2024
 *
 *   This module handles processing the ClientReady events (when the bot comes online).
 */

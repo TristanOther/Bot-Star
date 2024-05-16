@@ -3,7 +3,6 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/15/2024
-*   Last Modified: 05/15/2024
 *
 *   This module allows for easy image manipulation. Using the @napi-rs/canvas library,
 *   we have access to the HTML canvas. This file implements image templates for use in

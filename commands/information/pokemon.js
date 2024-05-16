@@ -3,7 +3,6 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/14/2024
-*   Last Modified: 05/14/2024
 *
 *   This command allows a user to lookup pokemon.
 */

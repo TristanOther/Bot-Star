@@ -3,7 +3,6 @@
 *   Project: Bot*
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/11/2024
-*   Last Modified: 05/15/2024
 *
 *   This module handles processing interaction events.
 */
