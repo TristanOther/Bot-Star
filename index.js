@@ -24,6 +24,7 @@ const COLORS = configParser.read(path.join(ROOT_PATH, CONFIG.configs.colors));
 process.env.COLOR_CONFIG = JSON.stringify(COLORS);
 
 // Global variables.
+const DEV_MODE = Number(CONFIG.dev.enabled);
 const BOT_TOKEN = CREDENTIALS.credentials.token;
 const CLIENT_ID = CREDENTIALS.credentials.id;
 const COMMANDS_PATH = CONFIG.folders.commands;
@@ -132,11 +133,13 @@ const rest = new REST().setToken(BOT_TOKEN);
         */
 
 		// Refresh commands in the dev guild. Uses put to fully refresh with current command set.
-		const data = await rest.put(
-			Routes.applicationGuildCommands(CLIENT_ID, DEV_GUILD_ID),
-			{ body: commands },
-		);
-		console.log(`Successfully reloaded ${commands.length}/${data.length} dev application (/) commands.`);
+        if (DEV_MODE) {
+            const data = await rest.put(
+                Routes.applicationGuildCommands(CLIENT_ID, DEV_GUILD_ID),
+                { body: commands },
+            );
+            console.log(`Successfully reloaded ${commands.length}/${data.length} dev application (/) commands.`);
+        }   
 
         // Refresh global commands. Uses put to fully refresh with current command set.
         const globalData = await rest.put(
