@@ -259,7 +259,7 @@ class Image {
         // Calculate the width of each segment.
         const segmentWidth = (adjWidth / colorData.length) - segmentSpacing;
         // Draw segments.
-        for (i = 0; i < colorData.length; i++) {
+        for (let i = 0; i < colorData.length; i++) {
             let iX = x + (i * (segmentWidth + segmentSpacing));
             await this.drawPillBody(iX, y, segmentWidth, height, colorData[i]);
         }
@@ -272,7 +272,7 @@ class Image {
             const longest = legend[stringUtils.getLongestStr(legend)];
             this.sizeText(longest, textWidth);
             // Draw the text in the set font size.
-            for (i = 0; i < legend.length; i++) {
+            for (let i = 0; i < legend.length; i++) {
                 let iX = x + (i * Math.floor(adjWidth / (legend.length - 1))) - (textWidth / 2);
                 await this.drawText(legend[i], iX, y + height + 20, textWidth, "#ffffff", false);
             }
@@ -292,6 +292,42 @@ class Image {
     }
 }
 
+// Class for generating a size `n` color swatch.
+class ColorSwatch extends Image {
+    /*
+    *   Constructor for a ColorSwatch.
+    *   @PARAM {integer} w - optional width for the swatch (default = 128).
+    *   @PARAM {integer} h - optional height for the swatch (default = w).
+    */
+    constructor(w = 128, h = w) {
+        super(w, h);
+    }
+
+    /*
+    *   init
+    *   Initializes this ColorSwatch by drawing color.
+    *   @PARAM {string} color - color for the swatch as a hex code.
+    *   @PARAM {string} textColor - color for the text of the swatch as a hex code.
+    *   @RETURN - None.
+    */
+    async init(color, textColor) {
+        // Draw the background color.
+        await super.setBackground(color);
+        // Save the current context.
+        this.context.save();
+        // Draw the text in the center of the screen.
+        this.sizeText(color, Math.floor(this.canvas.width / 2));
+        var mT = this.context.measureText(color);
+        var textWidth = mT.width;
+        var textHeight = Math.floor(mT.actualBoundingBoxAscent + mT.actualBoundingBoxDescent);
+        var x = Math.floor((this.canvas.width - textWidth) / 2);
+        var y = Math.floor((this.canvas.height + textHeight) / 2);
+        await this.drawText(color, x, y, textWidth, textColor, false);
+        // Restore the context from before starting.
+        this.context.restore();
+    }
+}
+
 // Class for image manipulation of a default user-card template.
 class UserCard extends Image {
     // Class variables.
@@ -302,10 +338,12 @@ class UserCard extends Image {
     *   Constructor for a UserCard.
     *   @PARAM {GuildMember} member - the member the card will be created for.
     *   @PARAM {string} title - the title that should be displayed on this card.
+    *   @PARAM {integer} w - the width of the image.
+    *   @PARAM {integer} h - the height of the image.
     */
-    constructor(member, title) {
+    constructor(member, title, w, h) {
         // Use super constructor to set default size for a user card.
-        super(800, 300);
+        super(w, h);
         // Set class variables.
         this.member = member;
         this.title = title;
@@ -342,42 +380,28 @@ class UserActivityCard extends UserCard {
     *   @PARAM {string} timePeriod - the duration of time this card is for.
     */
     constructor(member, timePeriod) {
-        super(member, `User Activity ${timePeriod}:`);
+        super(member, `User Activity ${timePeriod}:`, 800, 350);
     }
 
     /*
     *   init
     *   Initializes this UserActivityCard by drawing on the UserCard template.
+    *   @PARAM {array} colorData - an array of strings of hex colors to draw the activity bar.
+    *   @PARAM {array} legendData - an array of strings for the legend.
     *   @RETURN - None.
     */
-    async init() {
+    async init(colorData, legendData) {
         // Draw the UserCard template.
         await super.init();
         // Draw the activity bar.
-        await super.drawLoadingBar(20, 190, 760, 70, 
-            [COLORS.status.online,  COLORS.status.idle,    COLORS.status.idle,    COLORS.status.offline, COLORS.status.offline, COLORS.status.offline,
-             COLORS.status.dnd,     COLORS.status.idle,    COLORS.status.dnd,     COLORS.status.offline, COLORS.status.idle,    COLORS.status.online,
-             COLORS.status.online,  COLORS.status.online,  COLORS.status.dnd,     COLORS.status.idle,    COLORS.status.dnd,     COLORS.status.dnd,
-             COLORS.status.dnd,     COLORS.status.dnd,     COLORS.status.online,  COLORS.status.offline, COLORS.status.offline, COLORS.status.offline,
-             COLORS.status.online,  COLORS.status.idle,    COLORS.status.online,  COLORS.status.offline, COLORS.status.offline, COLORS.status.idle,
-             COLORS.status.idle,    COLORS.status.idle,    COLORS.status.dnd,     COLORS.status.online,  COLORS.status.offline, COLORS.status.offline,
-             COLORS.status.offline, COLORS.status.online,  COLORS.status.online,  COLORS.status.online,  COLORS.status.dnd,     COLORS.status.offline,
-             COLORS.status.idle,    COLORS.status.idle,    COLORS.status.offline, COLORS.status.offline, COLORS.status.offline, COLORS.status.dnd,
-             COLORS.status.online,  COLORS.status.online,  COLORS.status.dnd,     COLORS.status.offline, COLORS.status.online,  COLORS.status.offline,
-             COLORS.status.idle,    COLORS.status.online,  COLORS.status.dnd,     COLORS.status.online,  COLORS.status.online,  COLORS.status.offline,
-             COLORS.status.dnd,     COLORS.status.idle,    COLORS.status.dnd,     COLORS.status.online,  COLORS.status.online,  COLORS.status.offline,
-             COLORS.status.idle,    COLORS.status.idle,    COLORS.status.idle,    COLORS.status.offline, COLORS.status.offline, COLORS.status.idle,
-             COLORS.status.offline, COLORS.status.idle,    COLORS.status.online,  COLORS.status.dnd,     COLORS.status.offline, COLORS.status.dnd,
-             COLORS.status.online,  COLORS.status.offline, COLORS.status.dnd,     COLORS.status.idle,    COLORS.status.offline, COLORS.status.offline,
-             COLORS.status.online,  COLORS.status.idle,    COLORS.status.dnd,     COLORS.status.dnd,     COLORS.status.offline, COLORS.status.online,
-             COLORS.status.idle,    COLORS.status.idle,    COLORS.status.dnd,     COLORS.status.idle,    COLORS.status.offline, COLORS.status.offline],
-             3, ["12 am", "6 am", "12 pm", "6 pm", "12 pm"]);
+        await super.drawLoadingBar(20, 230, 760, 70, colorData, 3, legendData);
     }
 }
 
 // Export classes.
 module.exports = {
     Image: Image,
+    ColorSwatch: ColorSwatch,
     UserCard: UserCard,
     UserActivityCard: UserActivityCard,
 };

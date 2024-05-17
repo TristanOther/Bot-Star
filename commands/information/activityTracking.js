@@ -12,6 +12,7 @@ const fs = require("fs");
 const path = require("path");
 const ROOT_PATH = process.env.ROOT_PATH;
 const CONFIG = JSON.parse(process.env.CONFIG);
+const COLORS = JSON.parse(process.env.COLOR_CONFIG);
 const dbUtils = require(path.join(ROOT_PATH, CONFIG.utils.dbUtils));
 const {SlashCommandBuilder, EmbedBuilder} = require("discord.js");
 const Image = require(path.join(ROOT_PATH, CONFIG.utils.image));
@@ -114,123 +115,127 @@ module.exports = {
             // Get the targeted guildMember, otherwise use the sender if noone was specified.
             var user = interaction.options.getUser("target");
             var member = user ? await interaction.guild.members.fetch(user) : interaction.member;
-            
-            //Functions
-            //Returns the input UNIX timestamp rounded up to the nearest whole minute.
-            function getTimestampMin(timestamp) {
-                return (Math.floor(timestamp / 60000) + 1) * 60000;
-            }
-        
-            //Returns the input UNIX timestamp rounded down to the nearest whole minute.
-            function getTimestampHour(timestamp) {
-                return Math.floor(timestamp / 3600000) * 3600000;
-            }
-        
-            //Returns an array of UNIX timestamps for the last N hours to the present time.
-            function getLastNHours(n) {
-                var hours = [];
-                for (i=(3600000*n);i>=3600000;i-=3600000) {
-                hours.push(getTimestampHour(Date.now() - i));
-                }
-                return hours;
-            }
-        
-            //Returns a string representing the discord emoji alias that we want for each status.
-            function presenceFormat(presence) {
-                if (presence == 'online') return ':green_square:';
-                if (presence == 'idle') return ':yellow_square:';
-                if (presence == 'dnd') return ':red_square:';
-                return ':black_large_square:'
-            }
 
             // Query activity data for the specified user for the past 24 hours.
             var activity = await db.all(getActivityQuery, member.id);
             await db.close();
             if (!activity || activity.length <= 0) return await interaction.reply({embeds: [new EmbedBuilder().setColor(color).setDescription("No tracking data avalible for this user.")]}); //Error if no activity data.
-            var statuses = {};
-            //Loop throgh every found activity log for the user.
-            for (i = 0; i < activity.length; i++) {
-                //Get minute rounded timestamp of this log entry.
-                let minute = getTimestampMin(activity[i].timestamp);
-                //Get minute rounded timestamp of next log entry.
-                var finalMin;
-                if (activity.length > i + 1) {
-                    finalMin = activity[i + 1].timestamp;
-                } else {
-                    finalMin = getTimestampMin(Date.now());
-                }
-                //while loop to clone status of this log entry to every minute before that log entry in local statuses cache.
-                while (minute < finalMin) {
-                    statuses[minute] = {presence: activity[i].presence, status: activity[i].status, devices: [activity[i].mobile, activity[i].desktop, activity[i].web]};
-                    minute += 60000;
-                }
-            }
 
-            // Reply to interaction.
-            var hourlyStatuses = {};
-            var statusKeys = Object.keys(statuses).sort();
-            var hours = getLastNHours(24);
-            var hourIndex = 0;
-            var curHour = hours[0];
-            var nextHour = hours[1];
-            //Seperate statuses cache by hour for the last 24 hours.
-            for (i=0;i<statusKeys.length;i++) {
-                if (statusKeys[i] < curHour) continue;
-                if (statusKeys[i] >= nextHour) {
-                    hourIndex++;
-                    curHour = hours[hourIndex];
-                    nextHour = hours[hourIndex+1];
-                }
-                if (!hourlyStatuses[curHour]) hourlyStatuses[curHour] = [];
-                hourlyStatuses[curHour].push(statuses[statusKeys[i]]);
-            }
-
-            //Average an hour's status.
-            var averagedHourlyStatuses = {};
-            var hourKeys = Object.keys(hourlyStatuses).sort();
-            for (i=0;i<hourKeys.length;i++) {
-                let onlineTally=0,awayTally=0,dndTally=0,offlineTally=0;
-                hourlyStatuses[hourKeys[i]].forEach(status => {
-                    if (status.presence == 'online') onlineTally++;
-                    if (status.presence == 'idle') awayTally++;
-                    if (status.presence == 'dnd') dndTally++;
-                    if (status.presence == 'offline') offlineTally++;
-                });
-                let averagePresence;
-                let maxTally = Math.max(onlineTally, awayTally, dndTally, offlineTally);
-                if (offlineTally == maxTally) averagePresence = 'offline';
-                if (dndTally == maxTally) averagePresence = 'dnd';
-                if (awayTally == maxTally) averagePresence = 'idle';
-                if (onlineTally == maxTally) averagePresence = 'online';
-                averagedHourlyStatuses[hourKeys[i]] = {hourString: new dayjs(parseInt(hourKeys[i])).format('h a'), presence: averagePresence};
-            }
-
-            //Convert the averaged hourly statuses to a string to use as the displayed field.
-            var content = '';
-            Object.values(averagedHourlyStatuses).forEach(hour => {
-                content += `${presenceFormat(hour.presence)} - ${hour.hourString}\n`;
-            });
-
-            //Make averagedHourlyStatuses into this:
             /*
-                1pm: :green_circle:
-                2pm: :yellow_circle:
-                ...
+            *   generateTimestamps
+            *   Function for generating a list of timestamps over a certain period of time.
+            *   @PARAM {integer} start - timestamp of how far back data should be collected.
+            *   @PARAM {integer} duration - number of minutes between each timestamp (10 = each timestamp is a 10 min period).
+            *   @RETURN {array} - returns a list of timestamps of the specified duration from the start to now.
             */
+            function generateTimestamps(start, duration) {
+                    const timestamps = [];
+                    const now = Date.now();
+                    const durationMillis = duration * 60 * 1000;
+                
+                    for (let i = start; i < now; i += durationMillis) {
+                        timestamps.push(i);
+                    }
+                
+                    return timestamps;
+            }
+            
+            /*
+            *   colorTimestamps
+            *   Converts a list of timestamps into a list of status colors.
+            *   @PARAM {array} ts - list of timestamps to convert.
+            *   @PARAM {array} rows - rows from querying user data.
+            *   @RETURN {array} - returns a list of colors as hex code strings.
+            */
+            function colorTimestamps(ts, rows) {
+                let result = ts.map(x => x);
+                let curRow = 0;
+                let curTS = 0;
+                while (curTS < result.length) {
+                    if ((curRow < (rows.length - 1)) && (rows[curRow + 1].timestamp < result[curTS])) {
+                        curRow++;
+                        continue;
+                    }
+                    result[curTS] = COLORS.status[rows[curRow].presence];
+                    curTS++;
+                }
+                return result;
+            }
 
+            /*
+            *   generateTimes
+            *   Generates string representations of times evenly spaced across a timestamp range.
+            *   @PARAM {integer} start - the starting timestamp.
+            *   @PARAM {integer} end - the ending timestamp.
+            *   @PARAM {integer} count - how many values to generate. 
+            *   @PARAM {string} scale - the scale of the data (oneof: minutes, hours, days).
+            *   @RETURN {array} - returns a list of `count` strings representing times.
+            */
+            function generateTimes(start, end, count, scale) {
+                if (count < 2) {
+                    throw new Error('Count must be at least 2 to generate intervals.');
+                }
+            
+                if (start > end) {
+                    [start, end] = [end, start]; // Swap start and end if start is greater
+                }
+            
+                const scales = {
+                    minutes: 60 * 1000,
+                    hours: 60 * 60 * 1000,
+                    days: 24 * 60 * 60 * 1000
+                };
+            
+                const scaleMillis = scales[scale];
+                if (!scaleMillis) {
+                    throw new Error(`Invalid scale: ${scale}. Valid scales are 'minutes', 'hours', 'days'.`);
+                }
+            
+                const duration = end - start;
+                const interval = Math.floor(duration / (count - 1)); // Round down to the nearest whole number
+            
+                const times = [];
+            
+                const options = {
+                    hours: { hour: 'numeric', hour12: true },
+                    days: { month: 'numeric', day: 'numeric' }
+                };
+            
+                const formatter = new Intl.DateTimeFormat('en-US', options[scale] || {});
+            
+                for (let i = 0; i < count; i++) {
+                    const timestamp = new Date(start + i * interval);
+                    let timeString;
+            
+                    switch (scale) {
+                        case 'minutes':
+                            timeString = formatter.format(timestamp); // Not specifically formatted as per scale
+                            break;
+                        case 'hours':
+                            timeString = formatter.format(timestamp);
+                            break;
+                        case 'days':
+                            timeString = formatter.format(timestamp);
+                            break;
+                    }
+            
+                    times.push(timeString);
+                }
+            
+                return times;
+            }
+
+            let timestamps = generateTimestamps(Date.now() - (24 * 60 * 60 * 1000), 15);
+            let colors = colorTimestamps(timestamps, activity);
+            let legend = generateTimes(timestamps[0], timestamps[timestamps.length - 1], 5, "hours");
+
+            // Construct the activity card image.
             var img = new Image.UserActivityCard(member, "24hr");
-            await img.init();
+            await img.init(colors, legend);
             var attachment = await img.getAttachment();
 
-            //Construct and reply to interaction with embed.
-            var embed = new EmbedBuilder()
-            .setTitle('Activity in the past 24hr:')
-            .setAuthor({name: member.user.tag, iconURL: member.user.displayAvatarURL()})
-            .setColor(color)
-            .addFields(
-                {name: `Presence (ET):`, value: content, inline: true},
-            );
-            await interaction.reply({/*(embeds: [embed],*/ files: [attachment], emphemeral: false});
+            // Reply to the interaction.
+            await interaction.reply({files: [attachment], emphemeral: false});
         }
 
     }
