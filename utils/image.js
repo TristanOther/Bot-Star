@@ -87,20 +87,34 @@ class Image {
     *   @PARAM {integer} w - the width of the pill.
     *   @PARAM {integer} h - the height of the pill.
     *   @PARAM {string} color - a hex code color to draw the pill in.
+    *   @PARAM {boolean} horizontal - whether the pill body should be horizontal or vertical (default = false).
     */
-    async drawPillBody(x, y, w, h, color) {
+    async drawPillBody(x, y, w, h, color, horizontal = false) {
         // Save the current context.
         this.context.save();
         // Set the color.
         this.context.fillStyle = color;
-        // Calculate the radius.
-        const radius = w / 2;
-        // Draw the first semicircle. (A half arc could be used, but since the rectangle covers it we can cheat and use a circle.)
-        await this.drawCircle(x + radius, y + radius, radius, color);
-        // Draw the rectangle.
-        await this.drawRectangle(x, y + radius, w, h, color);
-        // Draw the second semicircle.
-        await this.drawCircle(x + radius, y + radius + h, radius, color);
+        // Draw a horizontal pill body.
+        if (horizontal) {
+            // Calculate the radius.
+            const radius = h / 2;
+            // Draw the first semicircle. (A half arc could be used, but since the rectangle covers it we can cheat and use a circle.)
+            await this.drawCircle(x + radius, y + radius, radius, color);
+            // Draw the rectangle.
+            await this.drawRectangle(x + radius, y, w, h, color);
+            // Draw the second semicircle.
+            await this.drawCircle(x + radius + w, y + radius, radius, color);
+        // Draw a vertical pill body.
+        } else {
+            // Calculate the radius.
+            const radius = w / 2;
+            // Draw the first semicircle. (A half arc could be used, but since the rectangle covers it we can cheat and use a circle.)
+            await this.drawCircle(x + radius, y + radius, radius, color);
+            // Draw the rectangle.
+            await this.drawRectangle(x, y + radius, w, h, color);
+            // Draw the second semicircle.
+            await this.drawCircle(x + radius, y + radius + h, radius, color);
+        }
         // Restore the context from before starting.
         this.context.restore();
     }
@@ -252,7 +266,7 @@ class Image {
     */
     async drawLoadingBar(x, y, maxWidth, height, colorData, segmentSpacing = 5, legend = false) {
         // Remove from the overall width any extra length that won't be needed.
-        const extraWidth = (maxWidth + segmentSpacing) % colorData.length; // +2 accounts for there being n-1 gaps for n segments.
+        const extraWidth = (maxWidth + segmentSpacing) % colorData.length; // +segmentSpacing accounts for there being n-1 gaps for n segments.
         const adjWidth = maxWidth - extraWidth;
         // Shift the bar over to compensate for missing width.
         x += Math.ceil(extraWidth / 2);
@@ -386,15 +400,81 @@ class UserActivityCard extends UserCard {
     /*
     *   init
     *   Initializes this UserActivityCard by drawing on the UserCard template.
-    *   @PARAM {array} colorData - an array of strings of hex colors to draw the activity bar.
+    *   @PARAM {array} colorData - an array containing a tuple of strings of hex colors to draw the activity bar and device activity.
     *   @PARAM {array} legendData - an array of strings for the legend.
     *   @RETURN - None.
     */
     async init(colorData, legendData) {
         // Draw the UserCard template.
         await super.init();
+        // Seperate the color data.
+        const activityColor = colorData.map(x => x[0]);
+        const webActivity = colorData.map(x => x[1]);
+        const desktopActivity = colorData.map(x => x[2]);
+        const mobileActivity = colorData.map(x => x[3]);
+        // Draw the device activity bars.
+        await this.addDeviceActivityBars(20, 215, 760, 5, [mobileActivity, desktopActivity, webActivity], ["mobile", "desktop", "web"]);
         // Draw the activity bar.
-        await super.drawLoadingBar(20, 230, 760, 70, colorData, 3, legendData);
+        await super.drawLoadingBar(20, 230, 760, 70, activityColor, 3, legendData);
+    }
+
+    /*
+    *   addDeviceActivityBars
+    *   Draws activity data bars on the card.
+    *   @PARAM {integer} x - the x coordinate of the lowest bar (top left corner of the bar, text will be to the left).
+    *   @PARAM {integer} y - the y coordinate of the lowest bar (top left corner of the bar, text will be to the left).
+    *   @PARAM {integer} maxWidth - the maximum width of the bars (will be scaled the same was as a loading bar).
+    *   @PARAM {integer} height - the height of the bars.
+    *   @PARAM {array} activities - list of arrays of data for where to draw the bars.
+    *   @PARAM {string} activityTexts - the names of the activities to put as a name next to the bars.
+    *   @PARAM {integer} segmentSpacing - the segment spacing of the corresponding loading bad (used to match widths) (default = 5).
+    *   @RETURN - None.
+    */
+    async addDeviceActivityBars(x, y, maxWidth, height, activities, activityTexts, segmentSpacing = 5) {
+        // Save the current context.
+        this.context.save();
+        // Get the longest activity text and size the text.
+        const textWidth = 9 * height;
+        const longest = activityTexts[stringUtils.getLongestStr(activityTexts)];
+        this.sizeText(longest, textWidth);
+        // Draw each activity bar.
+        for (let bar = 0; bar < activities.length; bar++) {
+            var curY = y - ((height * bar) * 3);
+            const activity = activities[bar];
+            const activityText = activityTexts[bar];
+            // Remove from the overall width any extra length that won't be needed.
+            const extraWidth = (maxWidth + segmentSpacing) % activity.length;
+            const adjWidth = maxWidth - extraWidth;
+            // Shift the bar over to compensate for missing width.
+            var shiftX = Math.floor(extraWidth / 2) + x;
+            // Draw the bar.
+            const segmentWidth = Math.round(adjWidth / activity.length);
+            var curX = shiftX;
+            var curWidth = 0;
+            var totalWidth = 0;
+            for (let i = 0; i < activity.length; i++) {
+                if (activity[i]) {
+                    curWidth += segmentWidth;
+                    totalWidth += segmentWidth;
+                } else if (curWidth) {
+                    await super.drawPillBody(curX, curY, curWidth, height, "#428df5", true);
+                    curX += curWidth + segmentWidth;
+                    curWidth = 0;
+                } else {
+                    curX += segmentWidth;
+                    totalWidth += segmentWidth;
+                }
+            }
+            if (curWidth) {
+                await super.drawPillBody(curX, curY, curWidth - (2 * segmentSpacing), height, "#428df5", true);
+            }
+            // Draw text.
+            var mT = this.context.measureText(activityText);
+            var textHeight = Math.floor(mT.actualBoundingBoxAscent + mT.actualBoundingBoxDescent);
+            await this.drawText(activityText, shiftX - textWidth, Math.floor(curY + (textHeight / 2)), textWidth, "#428df5", false);
+        }
+        // Restore the context from before starting.
+        this.context.restore();
     }
 }
 

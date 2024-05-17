@@ -19,7 +19,7 @@ const Image = require(path.join(ROOT_PATH, CONFIG.utils.image));
 
 
 module.exports = {
-    global: false,
+    global: true,
     // Create a slash command called `hex` with subcommands `random`.
 	data: new SlashCommandBuilder()
 		.setName("hex")

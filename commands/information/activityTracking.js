@@ -142,7 +142,7 @@ module.exports = {
             
             /*
             *   colorTimestamps
-            *   Converts a list of timestamps into a list of status colors.
+            *   Converts a list of timestamps into a list of status colors and device statuses.
             *   @PARAM {array} ts - list of timestamps to convert.
             *   @PARAM {array} rows - rows from querying user data.
             *   @RETURN {array} - returns a list of colors as hex code strings.
@@ -156,7 +156,7 @@ module.exports = {
                         curRow++;
                         continue;
                     }
-                    result[curTS] = COLORS.status[rows[curRow].presence];
+                    result[curTS] = [COLORS.status[rows[curRow].presence], rows[curRow].web, rows[curRow].desktop, rows[curRow].mobile];
                     curTS++;
                 }
                 return result;
@@ -227,7 +227,7 @@ module.exports = {
 
             let timestamps = generateTimestamps(Date.now() - (24 * 60 * 60 * 1000), 15);
             let colors = colorTimestamps(timestamps, activity);
-            let legend = generateTimes(timestamps[0], timestamps[timestamps.length - 1], 5, "hours");
+            let legend = generateTimes(timestamps[0], timestamps[timestamps.length - 1], 7, "hours");
 
             // Construct the activity card image.
             var img = new Image.UserActivityCard(member, "24hr");
