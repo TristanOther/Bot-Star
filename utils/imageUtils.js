@@ -11,12 +11,14 @@
 */
 
 // Imports
-const path = require("path");
-const ROOT_PATH = process.env.ROOT_PATH;
-const Canvas = require('@napi-rs/canvas');
 const {AttachmentBuilder} = require("discord.js");
-const CONFIG = JSON.parse(process.env.CONFIG);
+const Canvas = require('@napi-rs/canvas');
+const path = require("path");
+
 const COLORS = JSON.parse(process.env.COLOR_CONFIG);
+const CONFIG = JSON.parse(process.env.CONFIG);
+const ROOT_PATH = process.env.ROOT_PATH;
+
 const stringUtils = require(path.join(ROOT_PATH, CONFIG.utils.stringUtils));
 
 // Base class for image manipulation.
@@ -96,23 +98,17 @@ class Image {
         this.context.fillStyle = color;
         // Draw a horizontal pill body.
         if (horizontal) {
-            // Calculate the radius.
             const radius = h / 2;
-            // Draw the first semicircle. (A half arc could be used, but since the rectangle covers it we can cheat and use a circle.)
+            // Left circle -> rectangle body -> right circle.
             await this.drawCircle(x + radius, y + radius, radius, color);
-            // Draw the rectangle.
             await this.drawRectangle(x + radius, y, w, h, color);
-            // Draw the second semicircle.
             await this.drawCircle(x + radius + w, y + radius, radius, color);
         // Draw a vertical pill body.
         } else {
-            // Calculate the radius.
             const radius = w / 2;
-            // Draw the first semicircle. (A half arc could be used, but since the rectangle covers it we can cheat and use a circle.)
+            // Top circle -> rectangle body -> bottom circle.
             await this.drawCircle(x + radius, y + radius, radius, color);
-            // Draw the rectangle.
             await this.drawRectangle(x, y + radius, w, h, color);
-            // Draw the second semicircle.
             await this.drawCircle(x + radius, y + radius + h, radius, color);
         }
         // Restore the context from before starting.
@@ -134,12 +130,17 @@ class Image {
         this.context.save();
         // Draw the circle.
         if (thickness) {
+            // Set visual parameters.
             this.context.lineWidth = thickness;
             this.context.strokeStyle = color;
+            // Create a path and stroke a hollow circle.
             this.context.beginPath();
             this.context.arc(x, y, radius, 0, Math.PI * 2, true);
             this.context.stroke();
         } else {
+            // Set visual parameters.
+            this.context.fillStyle = color;
+            // Create a path and fill a circle.
             this.context.beginPath();
             this.context.arc(x, y, radius, 0, Math.PI * 2, true);
             this.context.fill();
@@ -187,8 +188,8 @@ class Image {
     *   drawImage, drawCircleImage, drawImageBorder, drawCircleImageBorder
     *   These functions with similar signatures all call the same helper to draw 
     *   an image to the canvas. They're split up into seperate functions because
-    *   it allows for a drastically simpler function call, as properties such as border
-    *   and circle are obfuscated into these function calls, rather than needing to be
+    *   it allows for a simpler function call, as properties such as border and
+    *   circle are obfuscated into these function calls, rather than needing to be
     *   given optional configurations when called from elsewhere in the code.
     *   @PARAM {string} src - path or URL to the image to add.
     *   @PARAM {integer} x - the x coordinate the image (top left corner).
@@ -223,9 +224,11 @@ class Image {
     *   @RETURN - None.
     */
     async sizeText(text, maxWidth) {
-        let fontSize = 100;
+        // Start off with a stupid font size.
+        let fontSize = 200;
         do {
-            this.context.font = `${fontSize -= (fontSize <= 20) ? 3 : 10}px sans-serif`;
+            // Jump down by 10 font size until we're below 20 (then switch to moving by 2), checking if the text fits.
+            this.context.font = `${fontSize -= (fontSize <= 20) ? 2 : 10}px sans-serif`;
         } while (this.context.measureText(text).width > maxWidth);
     }
 
@@ -283,7 +286,7 @@ class Image {
             // Save the current context.
             this.context.save();
             // Get the text width for the longest string, and set the context to that width.
-            const longest = legend[stringUtils.getLongestStr(legend)];
+            const longest = legend[stringUtils.getLongestStrIndex(legend)];
             this.sizeText(longest, textWidth);
             // Draw the text in the set font size.
             for (let i = 0; i < legend.length; i++) {
@@ -331,11 +334,11 @@ class ColorSwatch extends Image {
         this.context.save();
         // Draw the text in the center of the screen.
         this.sizeText(color, Math.floor(this.canvas.width / 2));
-        var mT = this.context.measureText(color);
-        var textWidth = mT.width;
-        var textHeight = Math.floor(mT.actualBoundingBoxAscent + mT.actualBoundingBoxDescent);
-        var x = Math.floor((this.canvas.width - textWidth) / 2);
-        var y = Math.floor((this.canvas.height + textHeight) / 2);
+        let mT = this.context.measureText(color);
+        let textWidth = mT.width;
+        let textHeight = Math.floor(mT.actualBoundingBoxAscent + mT.actualBoundingBoxDescent);
+        let x = Math.floor((this.canvas.width - textWidth) / 2);
+        let y = Math.floor((this.canvas.height + textHeight) / 2);
         await this.drawText(color, x, y, textWidth, textColor, false);
         // Restore the context from before starting.
         this.context.restore();
@@ -435,7 +438,7 @@ class UserActivityCard extends UserCard {
         this.context.save();
         // Get the longest activity text and size the text.
         const textWidth = 9 * height;
-        const longest = activityTexts[stringUtils.getLongestStr(activityTexts)];
+        const longest = activityTexts[stringUtils.getLongestStrIndex(activityTexts)];
         this.sizeText(longest, textWidth);
         // Draw each activity bar.
         for (let bar = 0; bar < activities.length; bar++) {
@@ -447,7 +450,7 @@ class UserActivityCard extends UserCard {
             const adjWidth = maxWidth - extraWidth;
             // Shift the bar over to compensate for missing width.
             var shiftX = Math.floor(extraWidth / 2) + x;
-            // Draw the bar.
+            // Loop through each timestamp, drawing bar segments as we reach the end of a group of valid timestamps.
             const segmentWidth = Math.round(adjWidth / activity.length);
             var curX = shiftX;
             var curWidth = 0;
@@ -465,8 +468,10 @@ class UserActivityCard extends UserCard {
                     totalWidth += segmentWidth;
                 }
             }
+            // If we get to the end of the timestamps without the device going offline make sure to draw the last bar.
             if (curWidth) {
-                await super.drawPillBody(curX, curY, curWidth - (2 * segmentSpacing), height, "#428df5", true);
+                // -2*segmentSpacing stops the final bar overflowing past the loading bar below it because of math stuff.
+                await super.drawPillBody(curX, curY, curWidth - (2 * segmentSpacing), height, "#428df5", true); 
             }
             // Draw text.
             var mT = this.context.measureText(activityText);

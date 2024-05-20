@@ -4,17 +4,29 @@
 *   Author: Tristan Other (@TristanOther)
 *   Date: 05/10/2024
 *
-*   An implementation of a config parser as a JS module. Why not go with an 
-*   existing library? Because I'm doing this for fun and enjoy writing code
-*   which relies on as few dependancies as possible. This code will just work as 
-*   long as this bot works, no possibility of broken dependancy. If you don't 
+*   This module implements a config parser, heavily inspired by Python's ConfigParser
+*   package. Why not go with an existing library? Because I'm doing this for fun and 
+*   enjoy writing code which relies on as few dependancies as possible. This code will 
+*   just work as long as this bot works, no possibility of broken dependancy. If you don't 
 *   like it, I don't know. That's your prerogative I guess ¯\_(ツ)_/¯.
+*/
+
+/*
+*   Example config file format: test.cfg
+*
+*   # Comment
+*   field1 = content
+*   field2 = "content"
+*
+*   # coment
+*   [section_header]
+*   field3 = content
 */
 
 // Imports
 const fs = require("fs");
-const path = require("path");
-// String utils path is hard coded because config can't be parsed without this file...
+
+// String utils path is hard coded because config can't be parsed without a parser...
 const stringUtils = require("./stringUtils.js");
 
 /*
@@ -65,15 +77,3 @@ exports.read = (path) => {
     // Return the read config object.
     return config;
 }
-
-/*
-*   Example config file format: test.cfg
-*
-*   # Comment
-*   var = content
-*   var2 = content
-*
-*   # coment
-*   [section_header]
-*   var3 = content
-*/

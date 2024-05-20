@@ -15,7 +15,7 @@ const CONFIG = JSON.parse(process.env.CONFIG);
 const COLORS = JSON.parse(process.env.COLOR_CONFIG);
 const dbUtils = require(path.join(ROOT_PATH, CONFIG.utils.dbUtils));
 const {SlashCommandBuilder, EmbedBuilder} = require("discord.js");
-const Image = require(path.join(ROOT_PATH, CONFIG.utils.image));
+const Image = require(path.join(ROOT_PATH, CONFIG.utils.imageUtils));
 
 
 const dayjs = require("dayjs");

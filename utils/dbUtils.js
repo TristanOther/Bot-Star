@@ -15,6 +15,11 @@ const sqlite3 = require("sqlite3").verbose();
 
 // Class for working with a DB. Ensuring databases are closed is the caller's responsibility.
 module.exports = class Database {
+    // Class fields.
+    active;
+    db;
+    path;
+
     /*
     * Constructor for a Database.
     * @PARAM {string} path - the path to the database file.
@@ -127,9 +132,14 @@ module.exports = class Database {
         });
     }
 
+    /*
+    *   each
+    *   Not implemented yet as I haven't had a use for it and don't really care.
+    *   @RETURN - ERROR.
+    */
     async each() {
         if (!this.active) return console.error("This Database has been closed and no longer has an active DB connection!");
-        //stub - not implemented yet
+        return console.error("Not implemented.");
     }
 
     /*

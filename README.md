@@ -20,11 +20,14 @@ A TODO list for this project is included in the README both so people can see up
 
 #### Activity Tracker
 - Increase resolution of device activity tracking (e.g., change the chunks from 15 mins to 5 mins, drawing will autoadjust).
+    - Ensure any time a device is active within a timestamp that it is marked for that device.
 - Make timestamps more consistent. Floor the bottom timestamp to the nearest chunk (i.e., 3:00-3:14 would become 3:00, 3:15-3:29 would become 3:15, etc.), or possibly round to the nearest chunk depending on if that causes anomalies.
+    - Modify coloring to account for percent of time range that an activity takes up (might fix).
 - Add custom time range to history command.
 - Add user setting for what style of chart the user wants data as, a bar displaying activity over time or a pie chart showing percentages of time (low priority).
 - Add user setting for activity history privacy. Currently on/off is the setting, but change it to off/private/public. Off = no data saved or viewable, private = only you can check your own history and the response is ephemeral, public = anyone can check your history.
 - Debounce presenceUpdate event (low priority).
+- Do an even more custom image management system to make images more precise? (extremely low priority)
 
 #### Code
 - Cleanup code in `*`.

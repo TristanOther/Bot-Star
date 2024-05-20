@@ -33,7 +33,7 @@ exports.unquote = (str) => {
 *   @PARAM {array} arr - the array of input strings.
 *   @RETURN {integer} - the index of the longest string.
 */
-exports.getLongestStr = (arr) => {
+exports.getLongestStrIndex = (arr) => {
     return arr.reduce((maxIndex, currentString, currentIndex, array) => {
         return currentString.length > array[maxIndex].length ? currentIndex : maxIndex;
     }, 0);
