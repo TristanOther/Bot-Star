@@ -498,8 +498,9 @@ class UserActivityCard extends UserCard {
         const maxBarWidth = Math.floor(this.canvas.width * 0.9);
         const barWidth = maxBarWidth - (maxBarWidth % activityColor.length);
         const barShift = Math.floor((this.canvas.width - barWidth) / 2);
-        await super.drawStatusBar(barShift, 230, barWidth, 70, activityColor, segmentSpacing);
-        await super.drawLegend(barShift, 305, barWidth, 10, legendData);
+        const barHeight = Math.floor(this.canvas.height * 0.2);
+        await super.drawStatusBar(barShift, (3.5 * barHeight), barWidth, barHeight, activityColor, segmentSpacing);
+        await super.drawLegend(barShift, (4.55 * barHeight), barWidth, barHeight * 0.15, legendData);
     }
 
     /*
