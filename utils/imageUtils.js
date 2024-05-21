@@ -161,21 +161,27 @@ class Image {
     *   @PARAM {integer} h - the height of the image (defaults to image height).
     *   @PARAM {boolean} circle - whether or not the image should be a circle.
     *   @PARAM {obj} border - parameters to draw a border in the form {color: <hex>, thickness <int>}.
+    *   @PARAM {boolean} dimScale - whether the dimensions provided are pixels or scale %.
     *   @RETURN - None.
     */
-    async drawImageHelper(src, x, y, w , h, circle, border) {
+    async drawImageHelper(src, x, y, w , h, circle, border, dimScale) {
         // Save the current context.
         this.context.save();
         // Retrieve the image.
         const image = await Canvas.loadImage(src);
         if (!image) return console.error("Could not retrieve image.");
-        // Ensure width and height have values.
-        if (!w) w = image.width;
-        if (!h) h = image.height;
+        // Ensure width and height have values (pixels or scale depending on dimScale).
+        if (dimScale) {
+            w = w ? (image.width * w) : image.width;
+            h = h ? (image.height * h) : image.height;
+        } else {
+            if (!w) w = image.width;
+            if (!h) h = image.height;
+        }
         // Draw the image.
         if (circle) {
             this.context.beginPath();
-            this.context.arc((image.width / 2) + x, (image.height / 2) + y, (image.width / 2), 0, Math.PI * 2, true);
+            this.context.arc((w / 2) + x, (h / 2) + y, (w / 2), 0, Math.PI * 2, true);
             this.context.closePath();
             this.context.clip();
         }
@@ -183,7 +189,7 @@ class Image {
         // Restore the context from before starting.
         this.context.restore();
         // Draw border if applicable.
-        if (border) this.drawCircle((image.width / 2) + x, (image.height / 2) + y, (image.width / 2) + (border.thickness / 2), border.color, border.thickness);
+        if (border) this.drawCircle((w / 2) + x, (h / 2) + y, (w / 2) + (border.thickness / 2), border.color, border.thickness);
     }
 
     /*
@@ -200,22 +206,23 @@ class Image {
     *   @PARAM {integer} bThickness - border thickness.
     *   @PARAM {integer} w - the width of the image (defaults to image width).
     *   @PARAM {integer} h - the height of the image (defaults to image height).
+    *   @PARAM {boolean} dimScale - whether the dimensions provided are pixels or scale % (default = false).
     *   @RETURN - None.
     */
-    async drawImage(src, x, y, w = false, h = false) {
-        await this.drawImageHelper(src, x, y, w, h, false, false);
+    async drawImage(src, x, y, w = false, h = false, dimScale = false) {
+        await this.drawImageHelper(src, x, y, w, h, false, false, dimScale);
     }
 
-    async drawCircleImage(src, x, y, w = false, h = false) {
-        await this.drawImageHelper(src, x, y, w, h, true, false);
+    async drawCircleImage(src, x, y, w = false, h = false, dimScale = false) {
+        await this.drawImageHelper(src, x, y, w, h, true, false, dimScale);
     }
 
-    async drawImageBorder(src, x, y, bColor, bThickness, w = false, h = false) {
-        await this.drawImageHelper(src, x, y, w, h, false, {color: bColor, thickness: bThickness});
+    async drawImageBorder(src, x, y, bColor, bThickness, w = false, h = false, dimScale = false) {
+        await this.drawImageHelper(src, x, y, w, h, false, {color: bColor, thickness: bThickness}, dimScale);
     }
 
-    async drawCircleImageBorder(src, x, y, bColor, bThickness, w = false, h = false) {
-        await this.drawImageHelper(src, x, y, w, h, true, {color: bColor, thickness: bThickness});
+    async drawCircleImageBorder(src, x, y, bColor, bThickness, w = false, h = false, dimScale = false) {
+        await this.drawImageHelper(src, x, y, w, h, true, {color: bColor, thickness: bThickness}, dimScale);
     }
 
     /*
@@ -283,7 +290,7 @@ class Image {
         // Preliminary maths.
         const segmentWidth = (w / colors.length) - spacing;
         // Error checking for ease-of-use.
-//if (segmentWidth % 1 != 0) return console.error("Error in segment width.");
+        if (segmentWidth % 1 != 0) return console.error("Error in segment width.");
         // Draw segments.
         for (let i = 0; i < colors.length; i++) {
             let xShift = x + (i * (segmentWidth + spacing));
@@ -292,12 +299,46 @@ class Image {
     }
 
     /*
+    *   drawActivityBar
+    *   Draws an activity bar with the specified parameters. An activity bar is a bar displaying when something is active over time.
+    *   @PARAM {integer} x - the x coordinate of the activity bar (top left corner).
+    *   @PARAM {integer} y - the y coordinate of the activity bar (top left corner).
+    *   @PARAM {integer} w - the width of the activity bar (caller handles determinig adequate width).
+    *   @PARAM {integer} h - the height of the activity bar (caller handles determinig adequate height).
+    *   @PARAM {array} activity - an array of boolean values indicating if a section is active
+    *   @PARAM {string} color - a hex code for the color of the bar.
+    *   @PARAM {integer} spacing - an optional parameter for the spacing of the loading bar this activity bar corresponds to. 
+    *                              Adjusts so there's no extra length on the end of drawn segments (default = 0).
+    */
+    async drawActivityBar(x, y, w, h, activity, color, spacing = 0) {
+        // Preliminary maths.
+        const sectionWidth = Math.floor(w / activity.length);
+        var curX = x;
+        var curWidth = 0;
+        activity.push(0); // Add an extra false value so the last bar gets drawn without duplicate code.
+        // Draw bar.
+        for (let i = 0; i <= activity.length; i++) {
+            if (activity[i]) {
+                curWidth += sectionWidth;
+            } else if (curWidth > 0) {
+                await this.drawPillBody(curX, y, curWidth - spacing, h, color, true);
+                curX += curWidth + sectionWidth;
+                curWidth = 0;
+            } else {
+                curX += sectionWidth;
+            }
+        }
+    }
+
+    /*
     *   drawLegend
     *   Draws a status bar with the specified parameters. A status bar is a bar composed of parallel lines conveying information.
+    *   NOTE: text will overflow slightly on either side to align with the bounding box given. Enter the height/width (vertical/horizontal legend) 
+    *         of the graph you're matching.
     *   @PARAM {integer} x - the x coordinate of the legend (top left corner).
     *   @PARAM {integer} y - the y coordinate of the status (top left corner).
     *   @PARAM {integer} w - the width of the status (caller handles determinig adequate width).
-    *   @PARAM {integer} h - the height of the status (caller handles determinig adequate height).
+    *   @PARAM {integer} h - the height of the status (caller handles determinig adequate height). 
     *   @PARAM {array} values - an array of text to use as the legend markers.
     *   @PARAM {string} color - an optional value specifying the color of the legend text (default = "#ffffff").
     *   @PARAM {boolean} horizontal - defines if the legend is horizontal or vertical (default = true).
@@ -325,53 +366,10 @@ class Image {
             }
         // Draw vertical legend.
         } else {
-
+            // Not yet implemented.
         }
         // Restore the context from before starting.
         this.context.restore();
-    }
-
-    /*
-    *   drawLoadingBar
-    *   Draws a loading/progress/data bar on the canvas.
-    *   @PARAM {integer} x - the x coordinate of the loading bar (top left corner).
-    *   @PARAM {integer} y - the y coordinate of the loading bar (top left corner).
-    *   @PARAM {integer} maxWidth - the maximum width of the loading bar (may be scaled down slightly to fit data nicely).
-    *   @PARAM {integer} height - the height of the loading bar.
-    *   @PARAM {array} colorData - array of hex codes for the colors to be drawn in each segment.
-    *   @PARAM {integer} segmentSpacing - the spacing between the segments of the loading bar (default = 5).
-    *   @PARAM {array} legend - optional array of values to place as legend markers along the progress bar.
-    *   @RETURN - None.
-    */
-    async drawLoadingBar(x, y, maxWidth, height, colorData, segmentSpacing = 5, legend = false) {
-        // Remove from the overall width any extra length that won't be needed.
-        const extraWidth = (maxWidth + segmentSpacing) % colorData.length; // +segmentSpacing accounts for there being n-1 gaps for n segments.
-        const adjWidth = maxWidth - extraWidth;
-        // Shift the bar over to compensate for missing width.
-        x += Math.ceil(extraWidth / 2);
-        // Calculate the width of each segment.
-        const segmentWidth = (adjWidth / colorData.length) - segmentSpacing;
-        // Draw segments.
-        for (let i = 0; i < colorData.length; i++) {
-            let iX = x + (i * (segmentWidth + segmentSpacing));
-            await this.drawPillBody(iX, y, segmentWidth, height, colorData[i]);
-        }
-        // Draw legend.
-        if (legend) {
-            const textWidth = 40;
-            // Save the current context.
-            this.context.save();
-            // Get the text width for the longest string, and set the context to that width.
-            const longest = legend[stringUtils.getLongestStrIndex(legend)];
-            this.sizeText(longest, textWidth);
-            // Draw the text in the set font size.
-            for (let i = 0; i < legend.length; i++) {
-                let iX = x + (i * Math.floor(adjWidth / (legend.length - 1))) - (textWidth / 2);
-                await this.drawText(legend[i], iX, y + height + 10, textWidth, "#ffffff", false);
-            }
-            // Restore the context from before starting.
-            this.context.restore();
-        }
     }
 
     /*
@@ -449,19 +447,41 @@ class UserCard extends Image {
     */
     async init() {
         // Draw the background.
-        await super.setBackground("#29292e", "#202020", 20);
+        const borderWidth = Math.floor(this.canvas.height * 0.05);
+        await super.setBackground("#29292e", "#202020", borderWidth);
         // Add the user's profile picture.
         if (this.member.presence) {
-            await super.drawCircleImageBorder(this.member.user.displayAvatarURL(), 25, 25, COLORS.status[this.member.presence.status], 5);
+            await super.drawCircleImageBorder(this.member.user.displayAvatarURL(),
+                                              Math.floor(borderWidth * 1.5),
+                                              Math.floor(borderWidth * 1.5),
+                                              COLORS.status[this.member.presence.status],
+                                              Math.floor(borderWidth / 4),
+                                              Math.floor(this.canvas.width / 800), // These scale the pfp based on the card dimensions V
+                                              Math.floor(this.canvas.height / 350), // (800x350 was the original card design dimensions, and fit a default PFP scaling well.)
+                                              true);
         } else {
-            await super.drawCircleImage(this.member.user.displayAvatarURL(), 25, 25);
+            await super.drawCircleImage(this.member.user.displayAvatarURL(),
+                                        (borderWidth * 2),
+                                        (borderWidth * 2),
+                                        Math.floor(this.canvas.width / 800),
+                                        Math.floor(this.canvas.height / 350),
+                                        true);
         }
         // Draw the header text.
-        await super.drawText(this.title, 180, 25, 300);
+        await super.drawText(this.title,
+                             Math.floor(this.canvas.width / 4.5),
+                             Math.floor(this.canvas.height / 15),
+                             Math.floor((this.canvas.width / 5) * 2));
         // Draw username.
-        await super.drawText(this.member.displayName, 180, 70, 600);
+        await super.drawText(this.member.displayName,
+                             Math.floor(this.canvas.width / 4.5),
+                             Math.floor((this.canvas.height / 15) * 3),
+                             Math.floor((this.canvas.width / 5) * 3));
         // Draw user ID.
-        await super.drawText(`id:${this.member.id}`, 600, 25, 180);
+        await super.drawText(`id:${this.member.id}`,
+                             Math.floor((this.canvas.width / 7) * 6) - Math.floor(borderWidth / 1.5),
+                             borderWidth,
+                             Math.floor(this.canvas.width / 7));
     }
 }
 
@@ -473,7 +493,7 @@ class UserActivityCard extends UserCard {
     *   @PARAM {string} timePeriod - the duration of time this card is for.
     */
     constructor(member, timePeriod) {
-        super(member, `User Activity ${timePeriod}:`, 800, 350);
+        super(member, `User Activity ${timePeriod}:`, 1600, 700);
     }
 
     /*
@@ -491,78 +511,53 @@ class UserActivityCard extends UserCard {
         const webActivity = colorData.map(x => x[1]);
         const desktopActivity = colorData.map(x => x[2]);
         const mobileActivity = colorData.map(x => x[3]);
-        // Draw the device activity bars.
-        await this.addDeviceActivityBars(20, 215, 760, 5, [mobileActivity, desktopActivity, webActivity], ["mobile", "desktop", "web"]);
-        // Draw the activity bar.
-        const segmentSpacing = 3;
+        // Draw the status bar.
+        const segmentSpacing = 3 * Math.floor(this.canvas.width / 800);
         const maxBarWidth = Math.floor(this.canvas.width * 0.9);
         const barWidth = maxBarWidth - (maxBarWidth % activityColor.length);
         const barShift = Math.floor((this.canvas.width - barWidth) / 2);
         const barHeight = Math.floor(this.canvas.height * 0.2);
         await super.drawStatusBar(barShift, (3.5 * barHeight), barWidth, barHeight, activityColor, segmentSpacing);
         await super.drawLegend(barShift, (4.55 * barHeight), barWidth, barHeight * 0.15, legendData);
-    }
-
-    /*
-    *   addDeviceActivityBars
-    *   Draws activity data bars on the card.
-    *   @PARAM {integer} x - the x coordinate of the lowest bar (top left corner of the bar, text will be to the left).
-    *   @PARAM {integer} y - the y coordinate of the lowest bar (top left corner of the bar, text will be to the left).
-    *   @PARAM {integer} maxWidth - the maximum width of the bars (will be scaled the same was as a loading bar).
-    *   @PARAM {integer} height - the height of the bars.
-    *   @PARAM {array} activities - list of arrays of data for where to draw the bars.
-    *   @PARAM {string} activityTexts - the names of the activities to put as a name next to the bars.
-    *   @PARAM {integer} segmentSpacing - the segment spacing of the corresponding loading bad (used to match widths) (default = 5).
-    *   @RETURN - None.
-    */
-    async addDeviceActivityBars(x, y, maxWidth, height, activities, activityTexts, segmentSpacing = 5) {
-        // Save the current context.
-        this.context.save();
-        // Get the longest activity text and size the text.
-        const textWidth = 8 * height;
-        const longest = activityTexts[stringUtils.getLongestStrIndex(activityTexts)];
-        this.sizeText(longest, textWidth);
-        // Draw each activity bar.
-        for (let bar = 0; bar < activities.length; bar++) {
-            const activity = activities[bar];
-            const activityText = activityTexts[bar];
-            var mT = this.context.measureText("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"); // Dummy text because bounding lines in HTML canvas are insane.
-            var textHeight = Math.floor(mT.actualBoundingBoxDescent);
-            var curY = y - ((textHeight * bar) * 2);
-            // Remove from the overall width any extra length that won't be needed.
-            const extraWidth = (maxWidth + segmentSpacing) % activity.length;
-            const adjWidth = maxWidth - extraWidth;
-            // Shift the bar over to compensate for missing width.
-            var shiftX = Math.floor(extraWidth / 2) + x;
-            // Loop through each timestamp, drawing bar segments as we reach the end of a group of valid timestamps.
-            const segmentWidth = Math.round(adjWidth / activity.length);
-            var curX = shiftX;
-            var curWidth = 0;
-            var totalWidth = 0;
-            for (let i = 0; i < activity.length; i++) {
-                if (activity[i]) {
-                    curWidth += segmentWidth;
-                    totalWidth += segmentWidth;
-                } else if (curWidth) {
-                    await super.drawPillBody(curX, curY + 2, curWidth - (2 * segmentSpacing), height, "#428df5", true);
-                    curX += curWidth + segmentWidth;
-                    curWidth = 0;
-                } else {
-                    curX += segmentWidth;
-                    totalWidth += segmentWidth;
-                }
-            }
-            // If we get to the end of the timestamps without the device going offline make sure to draw the last bar.
-            if (curWidth) {
-                // -2*segmentSpacing stops the final bar overflowing past the loading bar below it because of math stuff.
-                await super.drawPillBody(curX, curY + 2, curWidth - (2 * segmentSpacing), height, "#428df5", true); 
-            }
-            // Draw text.
-            
-            await this.drawText(activityText, shiftX - textWidth, curY, textWidth, "#428df5", false);
-        }
-        // Restore the context from before starting.
-        this.context.restore();
+        // Draw the activity bars.
+        const actBarHeight = Math.floor(barHeight / 15);
+        await this.drawActivityBar(barShift,
+                                   Math.floor(2.7 * barHeight),
+                                   barWidth,
+                                   actBarHeight,
+                                   webActivity,
+                                   COLORS.templates.activity,
+                                   segmentSpacing);
+        await this.drawImage(CONFIG.images.wbActIcn,
+                             barShift - Math.floor(actBarHeight * 6),
+                             Math.floor(2.7 * barHeight) - Math.floor(2 * actBarHeight),
+                             Math.floor(5 * actBarHeight),
+                             Math.floor(5 * actBarHeight));
+        await this.drawActivityBar(barShift,
+                                   Math.floor(3 * barHeight),
+                                   barWidth,
+                                   actBarHeight,
+                                   desktopActivity,
+                                   COLORS.templates.activity,
+                                   segmentSpacing);
+        await this.drawImage(CONFIG.images.dsktpActIcn,
+                             barShift - Math.floor(actBarHeight * 6),
+                             Math.floor(3 * barHeight) - Math.floor(2 * actBarHeight),
+                             Math.floor(5 * actBarHeight),
+                             Math.floor(5 * actBarHeight));
+        await this.drawActivityBar(barShift,
+                                   Math.floor(3.3 * barHeight),
+                                   barWidth,
+                                   actBarHeight,
+                                   mobileActivity,
+                                   COLORS.templates.activity,
+                                   segmentSpacing);
+        await this.drawImage(CONFIG.images.mblActIcn,
+                             barShift - Math.floor(actBarHeight * 6),
+                             Math.floor(3.3 * barHeight) - Math.floor(2 * actBarHeight),
+                             Math.floor(5 * actBarHeight),
+                             Math.floor(5 * actBarHeight));
+        
     }
 }
 
