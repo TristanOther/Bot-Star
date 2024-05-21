@@ -10,11 +10,14 @@
 // Imports
 const fs = require("fs");
 const path = require("path");
+const {SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits} = require("discord.js");
+
 const ROOT_PATH = process.env.ROOT_PATH;
 const CONFIG = JSON.parse(process.env.CONFIG);
-const dbUtils = require(path.join(ROOT_PATH, CONFIG.utils.dbUtils));
+
 const counterUtils = require(path.join(ROOT_PATH, CONFIG.utils.counterUtils));
-const {SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits} = require("discord.js");
+const dbUtils = require(path.join(ROOT_PATH, CONFIG.utils.dbUtils));
+const DiscordUtils = require(path.join(ROOT_PATH, CONFIG.utils.discordUtils));
 
 module.exports = {
     global: true,
@@ -185,7 +188,7 @@ module.exports = {
             // Remove the counter from the channel name.
             var channel = interaction.guild.channels.cache.find(c => c.id == existingCounter.channel_id);
             var oldName = channel.name;
-            await interaction.guild.channels.edit(channel.id, {name: counterUtils.removeCounter(oldName)});
+            DiscordUtils.renameChannel(interaction.guild, channel, await counterUtils.removeCounter(oldName));
             // Create and send embed confirming deletion.
             const embed = new EmbedBuilder()
                 .setTitle('COUNTER REMOVED')

@@ -79,6 +79,7 @@ async function refreshCounters(guild, counters, db) {
     for (counterType of counters) {
         // Get the counter.
         var counter = await db.get(getCounter, guild.id, counterType);
+        if (!counter) continue;
         // Find the channel for this counter.
         try {
             var channel = await guild.channels.cache.find(c => c.id == counter.channel_id);
