@@ -35,6 +35,8 @@ class Image {
     constructor(w, h) {
         this.canvas = Canvas.createCanvas(w, h);
         this.context = this.canvas.getContext('2d');
+        // Fixes text being aligned on some unreadable garbage imaginary line which screws up any type of alignment or sizing you try to do.
+        this.context.textBaseline = "top";
     }
 
     /*
@@ -101,15 +103,15 @@ class Image {
             const radius = h / 2;
             // Left circle -> rectangle body -> right circle.
             await this.drawCircle(x + radius, y + radius, radius, color);
-            await this.drawRectangle(x + radius, y, w, h, color);
-            await this.drawCircle(x + radius + w, y + radius, radius, color);
+            await this.drawRectangle(x + radius, y, w - h, h, color); // w - h accounts for the 2 circle radii added to the width.
+            await this.drawCircle(x + (w - radius), y + radius, radius, color);
         // Draw a vertical pill body.
         } else {
             const radius = w / 2;
             // Top circle -> rectangle body -> bottom circle.
             await this.drawCircle(x + radius, y + radius, radius, color);
-            await this.drawRectangle(x, y + radius, w, h, color);
-            await this.drawCircle(x + radius, y + radius + h, radius, color);
+            await this.drawRectangle(x, y + radius, w, h - w, color); // h - w accounts for the 2 circle radii added to the height.
+            await this.drawCircle(x + radius, y + (h - radius), radius, color);
         }
         // Restore the context from before starting.
         this.context.restore();
@@ -221,23 +223,34 @@ class Image {
     *   Sets this context to the appropriate font size for the text you want to draw.
     *   @PARAM {string} text - the text that's going to be drawn.
     *   @PARAM {integer} maxWidth - the maximum width your text should take up (in pixels).
+    *   @PARAM {integer} maxHeight - the maximum height your text should take up (in pixels) (default = 201 (larger than the max this function generates)).
     *   @RETURN - None.
     */
-    async sizeText(text, maxWidth) {
+    async sizeText(text, maxWidth, maxHeight = 201) {
         // Start off with a stupid font size.
         let fontSize = 200;
         do {
-            // Jump down by 10 font size until we're below 20 (then switch to moving by 2), checking if the text fits.
-            this.context.font = `${fontSize -= (fontSize <= 20) ? 2 : 10}px sans-serif`;
-        } while (this.context.measureText(text).width > maxWidth);
+            // Set the context's font.
+            this.context.font = `${fontSize}px sans-serif`;
+            // Decrease the font size depending on the current size.
+            if (fontSize <= 20) {
+                fontSize -= 1;
+            } else if (fontSize <= 30) {
+                fontSize -= 2;
+            } else if (fontSize <= 100) {
+                fontSize -= 5; 
+            } else {
+                fontSize -= 10;
+            }
+        } while (this.context.measureText(text).width > maxWidth || this.context.measureText(text).actualBoundingBoxDescent > maxHeight);
     }
 
     /*
     *   drawText
     *   Draws text on the canvas.
     *   @PARAM {string} text - the text to draw.
-    *   @PARAM {integer} x - x coordinate to place text (bottom left corner).
-    *   @PARAM {integer} y - y coordinate to place text (bottom left corner).
+    *   @PARAM {integer} x - x coordinate to place text (top left corner).
+    *   @PARAM {integer} y - y coordinate to place text (top left corner).
     *   @PARAM {integer} maxWidth - the maximum width the text can take up.
     *   @PARAM {string} color - the color of the text (default white).
     *   @PARAM {boolean} autosize - whether or not to autosize the text. When off
@@ -253,6 +266,69 @@ class Image {
         this.context.fillText(text, x, y);
         // Restore the context from before starting.
         if (autosize) this.context.restore();
+    }
+
+    /*
+    *   drawStatusBar
+    *   Draws a status bar with the specified parameters. A status bar is a bar composed of parallel lines conveying information.
+    *   @PARAM {integer} x - the x coordinate of the status bar (top left corner).
+    *   @PARAM {integer} y - the y coordinate of the status bar (top left corner).
+    *   @PARAM {integer} w - the width of the status bar (caller handles determinig adequate width).
+    *   @PARAM {integer} h - the height of the status bar (caller handles determinig adequate height).
+    *   @PARAM {array} colors - an array of hex codes representing each segment's color.
+    *   @PARAM {integer} spacing - an optional value specifying the spacing between each segment (default = 5).
+    *   @RETURN - None.
+    */
+    async drawStatusBar(x, y, w, h, colors, spacing) {
+        // Preliminary maths.
+        const segmentWidth = (w / colors.length) - spacing;
+        // Error checking for ease-of-use.
+//if (segmentWidth % 1 != 0) return console.error("Error in segment width.");
+        // Draw segments.
+        for (let i = 0; i < colors.length; i++) {
+            let xShift = x + (i * (segmentWidth + spacing));
+            await this.drawPillBody(xShift, y, segmentWidth, h, colors[i]);
+        }
+    }
+
+    /*
+    *   drawLegend
+    *   Draws a status bar with the specified parameters. A status bar is a bar composed of parallel lines conveying information.
+    *   @PARAM {integer} x - the x coordinate of the legend (top left corner).
+    *   @PARAM {integer} y - the y coordinate of the status (top left corner).
+    *   @PARAM {integer} w - the width of the status (caller handles determinig adequate width).
+    *   @PARAM {integer} h - the height of the status (caller handles determinig adequate height).
+    *   @PARAM {array} values - an array of text to use as the legend markers.
+    *   @PARAM {string} color - an optional value specifying the color of the legend text (default = "#ffffff").
+    *   @PARAM {boolean} horizontal - defines if the legend is horizontal or vertical (default = true).
+    *   @RETURN - None.
+    */
+    async drawLegend(x, y, w, h, values, color = "#ffffff", horizontal = true) {
+        // Save the current context.
+        this.context.save();
+        // Draw horizontal legend.
+        if (horizontal) {
+            // Preliminary calculations.
+            const maxWidth = Math.floor(w / values.length);
+            const shiftDistance = Math.floor(w / (values.length - 1));
+            // Size text based on longest legend marker.
+            const longest = values[stringUtils.getLongestStrIndex(values)];
+            this.sizeText(longest, maxWidth, h);
+            // Draw legend markers.
+            for (let i = 0; i < values.length; i++) {
+                this.drawText(values[i],
+                              x + (i * shiftDistance) - (this.context.measureText(values[i]).width / 2), 
+                              y, 
+                              maxWidth,
+                              color,
+                              false);
+            }
+        // Draw vertical legend.
+        } else {
+
+        }
+        // Restore the context from before starting.
+        this.context.restore();
     }
 
     /*
@@ -291,7 +367,7 @@ class Image {
             // Draw the text in the set font size.
             for (let i = 0; i < legend.length; i++) {
                 let iX = x + (i * Math.floor(adjWidth / (legend.length - 1))) - (textWidth / 2);
-                await this.drawText(legend[i], iX, y + height + 20, textWidth, "#ffffff", false);
+                await this.drawText(legend[i], iX, y + height + 10, textWidth, "#ffffff", false);
             }
             // Restore the context from before starting.
             this.context.restore();
@@ -338,7 +414,7 @@ class ColorSwatch extends Image {
         let textWidth = mT.width;
         let textHeight = Math.floor(mT.actualBoundingBoxAscent + mT.actualBoundingBoxDescent);
         let x = Math.floor((this.canvas.width - textWidth) / 2);
-        let y = Math.floor((this.canvas.height + textHeight) / 2);
+        let y = Math.floor((this.canvas.height - textHeight) / 2);
         await this.drawText(color, x, y, textWidth, textColor, false);
         // Restore the context from before starting.
         this.context.restore();
@@ -381,11 +457,11 @@ class UserCard extends Image {
             await super.drawCircleImage(this.member.user.displayAvatarURL(), 25, 25);
         }
         // Draw the header text.
-        await super.drawText(this.title, 180, 55, 400);
+        await super.drawText(this.title, 180, 25, 300);
         // Draw username.
-        await super.drawText(this.member.displayName, 180, 135, 720);
+        await super.drawText(this.member.displayName, 180, 70, 600);
         // Draw user ID.
-        await super.drawText(`id:${this.member.id}`, 590, 40, 200);
+        await super.drawText(`id:${this.member.id}`, 600, 25, 180);
     }
 }
 
@@ -418,7 +494,12 @@ class UserActivityCard extends UserCard {
         // Draw the device activity bars.
         await this.addDeviceActivityBars(20, 215, 760, 5, [mobileActivity, desktopActivity, webActivity], ["mobile", "desktop", "web"]);
         // Draw the activity bar.
-        await super.drawLoadingBar(20, 230, 760, 70, activityColor, 3, legendData);
+        const segmentSpacing = 3;
+        const maxBarWidth = Math.floor(this.canvas.width * 0.9);
+        const barWidth = maxBarWidth - (maxBarWidth % activityColor.length);
+        const barShift = Math.floor((this.canvas.width - barWidth) / 2);
+        await super.drawStatusBar(barShift, 230, barWidth, 70, activityColor, segmentSpacing);
+        await super.drawLegend(barShift, 305, barWidth, 10, legendData);
     }
 
     /*
@@ -437,14 +518,16 @@ class UserActivityCard extends UserCard {
         // Save the current context.
         this.context.save();
         // Get the longest activity text and size the text.
-        const textWidth = 9 * height;
+        const textWidth = 8 * height;
         const longest = activityTexts[stringUtils.getLongestStrIndex(activityTexts)];
         this.sizeText(longest, textWidth);
         // Draw each activity bar.
         for (let bar = 0; bar < activities.length; bar++) {
-            var curY = y - ((height * bar) * 3);
             const activity = activities[bar];
             const activityText = activityTexts[bar];
+            var mT = this.context.measureText("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"); // Dummy text because bounding lines in HTML canvas are insane.
+            var textHeight = Math.floor(mT.actualBoundingBoxDescent);
+            var curY = y - ((textHeight * bar) * 2);
             // Remove from the overall width any extra length that won't be needed.
             const extraWidth = (maxWidth + segmentSpacing) % activity.length;
             const adjWidth = maxWidth - extraWidth;
@@ -460,7 +543,7 @@ class UserActivityCard extends UserCard {
                     curWidth += segmentWidth;
                     totalWidth += segmentWidth;
                 } else if (curWidth) {
-                    await super.drawPillBody(curX, curY, curWidth, height, "#428df5", true);
+                    await super.drawPillBody(curX, curY + 2, curWidth - (2 * segmentSpacing), height, "#428df5", true);
                     curX += curWidth + segmentWidth;
                     curWidth = 0;
                 } else {
@@ -471,12 +554,11 @@ class UserActivityCard extends UserCard {
             // If we get to the end of the timestamps without the device going offline make sure to draw the last bar.
             if (curWidth) {
                 // -2*segmentSpacing stops the final bar overflowing past the loading bar below it because of math stuff.
-                await super.drawPillBody(curX, curY, curWidth - (2 * segmentSpacing), height, "#428df5", true); 
+                await super.drawPillBody(curX, curY + 2, curWidth - (2 * segmentSpacing), height, "#428df5", true); 
             }
             // Draw text.
-            var mT = this.context.measureText(activityText);
-            var textHeight = Math.floor(mT.actualBoundingBoxAscent + mT.actualBoundingBoxDescent);
-            await this.drawText(activityText, shiftX - textWidth, Math.floor(curY + (textHeight / 2)), textWidth, "#428df5", false);
+            
+            await this.drawText(activityText, shiftX - textWidth, curY, textWidth, "#428df5", false);
         }
         // Restore the context from before starting.
         this.context.restore();

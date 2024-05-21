@@ -224,10 +224,12 @@ module.exports = {
             
                 return times;
             }
-
-            let timestamps = generateTimestamps(Date.now() - (24 * 60 * 60 * 1000), 15);
+            
+            let twoFourHourAgo = Date.now() - (24 * 60 * 60 * 1000);
+            let twoFourHourAgoAdjusted = twoFourHourAgo - (twoFourHourAgo % (60 * 60 * 1000));
+            let timestamps = generateTimestamps(twoFourHourAgoAdjusted, 15);
             let colors = colorTimestamps(timestamps, activity);
-            let legend = generateTimes(timestamps[0], timestamps[timestamps.length - 1], 7, "hours");
+            let legend = generateTimes(timestamps[0], timestamps[timestamps.length - 1], 13, "hours");
 
             // Construct the activity card image.
             var img = new Image.UserActivityCard(member, "24hr");

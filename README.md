@@ -1,9 +1,9 @@
 # Bot-Star
 Bot* is an all-purpose Discord bot. I add random features people ask for or I things I just feel like programming, so there may not be much of a consistent theme.
 
-This bot is free to use, licensed under the GNU v3 license (see licence file).
+This bot is free to use, licensed under the GNU v3 license (see license file).
 
-You may download the code and host your own instance of this bot, as well as modify it as you see fit according to the license rules. Instructions for how to setup the bot including creating the files not included in this repo such as the token file can be found at the bottom of this page.
+You may download the code and host your own instance of this bot, as well as modify it as you see fit according to the license rules. Instructions for how to setup the bot and create the files not included in this repo (e.g. credentials file) can be found at the bottom of this page.
 ## TODO
 A TODO list for this project is included in the README both so people can see upcoming features and so I have a nicely formatted list to work off of.
 
@@ -21,8 +21,7 @@ A TODO list for this project is included in the README both so people can see up
 #### Activity Tracker
 - Increase resolution of device activity tracking (e.g., change the chunks from 15 mins to 5 mins, drawing will autoadjust).
     - Ensure any time a device is active within a timestamp that it is marked for that device.
-- Make timestamps more consistent. Floor the bottom timestamp to the nearest chunk (i.e., 3:00-3:14 would become 3:00, 3:15-3:29 would become 3:15, etc.), or possibly round to the nearest chunk depending on if that causes anomalies.
-    - Modify coloring to account for percent of time range that an activity takes up (might fix).
+- Modify coloring to account for percent of time range that an activity takes up (might fix).
 - Add custom time range to history command.
 - Add user setting for what style of chart the user wants data as, a bar displaying activity over time or a pie chart showing percentages of time (low priority).
 - Add user setting for activity history privacy. Currently on/off is the setting, but change it to off/private/public. Off = no data saved or viewable, private = only you can check your own history and the response is ephemeral, public = anyone can check your history.
