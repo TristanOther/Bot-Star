@@ -32,6 +32,7 @@ module.exports = {
 		// Get tracked users.
 		var users = await db.all(trackedQuery);
 		client.activityTrackedUsers = users.map(obj => obj.user_id);
+		client.userUpdates = {};
 		// Get and refresh counters.
 		var counters = await db.all(counterQuery);
 		client.counters = {};

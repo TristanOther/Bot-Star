@@ -1,1 +1,1 @@
-SELECT user_id FROM users WHERE tracking_enabled = 1;
+SELECT user_id FROM users WHERE tracking_enabled = "public" OR tracking_enabled = "private";

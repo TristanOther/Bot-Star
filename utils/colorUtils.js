@@ -168,28 +168,28 @@ function randomColor(color = false, RGB = false) {
         l = MathUtils.randNum(0.04, 0.95);
     } else if (color == "purple") {
         /*
-        *   Hue       : 256 - 276
+        *   Hue       : 256 - 284
         *   Saturation: 0.15 - 1
         *   Lightness : 0.04 - 0.95
         */
-        h = MathUtils.randNumRounded(256, 276);
+        h = MathUtils.randNumRounded(256, 284);
         s = MathUtils.randNum(0.15, 1);
         l = MathUtils.randNum(0.04, 0.95);
     } else if (color == "pink") {
         /*
-        *   Hue       : 0 - 10, 331 - 360 | 277 - 330
+        *   Hue       : 0 - 10, 331 - 360 | 285 - 330
         *   Saturation: 0.2 - 1           | 0.15 - 1
         *   Lightness : 0.8 - 0.9         | 0.12 - 0.9
         */
         // Pick the red-range pinks vs the magenta range. 1/5 chance because there's more magenta range than red range pinks.
-        let odds = randNumRounded(0, 100);
+        let odds = MathUtils.randNumRounded(0, 100);
         if (odds < 20) {
             h = MathUtils.randNumRounded(0, 39);
             h = (h > 10) ? (h + 321) : h;
             s = MathUtils.randNum(0.2, 1);
             l = MathUtils.randNum(0.8, 0.9);
         } else {
-            h = MathUtils.randNumRounded(277, 330);
+            h = MathUtils.randNumRounded(285, 330);
             s = MathUtils.randNum(0.15, 1);
             l = MathUtils.randNum(0.12, 0.95);
         }                

@@ -30,7 +30,19 @@ module.exports = {
 		// Get the user's status.
 		var status = newPresence.activities.length > 0 ? newPresence.activities[0].state : "N/A";
 
-		// Write entry to DB.
+		// Check if the this update matches the user's previous update (debounces event).
+		if (newPresence.client.userUpdates[newPresence.user.id]) {
+			var prev = newPresence.client.userUpdates[newPresence.user.id];
+			let prevPresence = prev.status ? prev.status : "offline"
+			let prevDevices = prev.clientStatus ? Object.keys(prev.clientStatus) : [];
+			let prevStatus = prev.activities.length > 0 ? prev.activities[0].state : "N/A";
+			if (prevPresence == presence && prevDevices == devices && prevStatus == status) {
+				newPresence.client.userUpdates[newPresence.user.id] = newPresence;
+				return;
+			}
+		}
+		newPresence.client.userUpdates[newPresence.user.id] = newPresence;
+		
 
 		// Load SQL queries.
 		var logActivityQuery = fs.readFileSync(path.join(ROOT_PATH, CONFIG.queries.logActivity), 'utf8');

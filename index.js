@@ -29,6 +29,8 @@ const BOT_TOKEN = CREDENTIALS.credentials.token;
 const CLIENT_ID = CREDENTIALS.credentials.id;
 const COMMANDS_PATH = CONFIG.folders.commands;
 const COMMANDS_FOLDER = fs.readdirSync(COMMANDS_PATH);
+const INTERACTION_HANDLER_PATH = CONFIG.folders.interaction_handlers;
+const INTERACTION_HANDLER_FOLDER = fs.readdirSync(INTERACTION_HANDLER_PATH);
 const DEV_GUILD_ID = CREDENTIALS.devGuild.id;
 const EVENTS_PATH = CONFIG.folders.events;
 const EVENTS_MODULES = fs.readdirSync(EVENTS_PATH).filter(file => file.endsWith(".js"));
@@ -151,6 +153,37 @@ const rest = new REST().setToken(BOT_TOKEN);
 		console.error(error);
 	}
 })();
+
+/*
+*   Dynamic interaction handler.
+*   This code loads interaction files into a client collection so they can
+*   be called later when an interaction is used (such as an existing button or select menu).
+*/
+// Add a collection to the client for storing interaction handler files.
+client.interaction_handlers = new Collection();
+
+// Look through every folder in the configured folder for interaction handler modules (organization matters!)
+for (const folder of INTERACTION_HANDLER_FOLDER) {
+    // Get the absolute path of this folder.
+    const folderPath = path.join(ROOT_PATH, INTERACTION_HANDLER_PATH, folder);
+    const filesPath = fs.readdirSync(folderPath).filter(file => file.endsWith(".js"));
+    // Look through each file in each subfolder.
+	for (const file of filesPath) {
+        // Get the absolute path of this file.
+		const filePath = path.join(folderPath, file);
+		const interaction_handler = require(filePath);
+        // If the interaction handler contains a component_id and execute function it's a complete component.
+		if ("component_id" in interaction_handler && "execute" in interaction_handler) {
+            // Set the type of this interaction handler based on the folder it's in.
+            interaction_handler.type = folder;
+            // Add this interaction handler to the client's collection of interaction handlers.
+			client.interaction_handlers.set(interaction_handler.component_id, interaction_handler);
+        // Log error if we encounter a module in the interaction_handlers folder that doesn't have the proper fields.
+		} else {
+			console.log(`[WARNING] The interaction handler at ${filePath} is missing a required "component_id" or "execute" property.`);
+		}
+	}
+}
 
 /*
 *   Connect the bot to the Discord API.

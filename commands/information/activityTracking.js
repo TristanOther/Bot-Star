@@ -28,16 +28,27 @@ module.exports = {
 		.setDescription("Activity tracking allows users to track their Discord online activity.")
         .addSubcommandGroup(subcommandGroup =>
             subcommandGroup
-                .setName("toggle")
-                .setDescription("Enable/disable activity tracking for your account (disabled by default).")
-                .addSubcommand(subcommand =>
-                    subcommand
-                        .setName("enable")
-                        .setDescription("Enable activity tracking for your account."))
-                .addSubcommand(subcommand =>
-                    subcommand
-                        .setName("disable")
-                        .setDescription("Disable activity tracking for your account.")))
+            .setName("privacy")
+            .setDescription("Configure activity tracking for your account (disabled by default).")
+            .addSubcommand(subcommand =>
+                subcommand
+                .setName("info")
+                .setDescription("Learn about privacy settings!")
+            )
+            .addSubcommand(subcommand =>
+                subcommand
+                .setName("set")
+                .setDescription("Set your account's tracking privacy settings.")
+                .addStringOption(option => 
+                    option
+                    .setName("options")
+                    .setDescription("Use 'info' to learn about each privacy setting!")
+                    .setRequired(true)
+                    .addChoices(
+                        {name: "Public", value: "public"},
+                        {name: "Private", value: "private"},
+                        {name: "Disabled", value: "disabled"})))
+        )
         .addSubcommand(subcommand =>
             subcommand
                 .setName("history")
@@ -65,45 +76,48 @@ module.exports = {
         var user = await db.get(getUserQuery, interaction.user.id);
 
         // Enable/disable tracking commands. (`Toggle` subcommand category.)
-        if (interaction.options.getSubcommandGroup() == "toggle") {
-            // SQL queries.
-            var toggleTrackingQuery = fs.readFileSync(path.join(ROOT_PATH, CONFIG.queries.setUserTracking), 'utf8');
-            var addTrackingQuery = fs.readFileSync(path.join(ROOT_PATH, CONFIG.queries.insertUser), 'utf8');
-            // Enable tracking subcommand.
-            if (interaction.options.getSubcommand() === "enable") {
-                // Enable tracking for this user in the database.
-                if (user) {
-                    await db.run(toggleTrackingQuery, 1, interaction.user.id);
-                    await db.close();
-                } else {
-                    await db.run(addTrackingQuery, interaction.user.id, 1);
-                    await db.close();
-                }
-                // Add user to the list of currently tracked users.
-                client.activityTrackedUsers.push(interaction.user.id);
-                // Send reply message.
+        if (interaction.options.getSubcommandGroup() == "privacy") {
+            // Privacy info command.
+            if (interaction.options.getSubcommand() == "info") {
+                // Text blurbs.
+                var publicStore = "__What we collect/store:__\n- Your Discord presence (online/away/do not disturb/offline).\n- Your status (what you're playing, custom statuses, etc.)\n- Your username, user ID, and other **public** account information.";
+                var privateStore = "__What we collect/store:__\n- We may collect and store **public** information about your account such as username and user ID. This allows us to track that you've disabled activity tracking. If you've never enabled activity tracking in the past then we won't have this data.\n- If you've previously enabled activity tracking and have't cleared your data then we retain data collected while you had tracking enabled as per the guidelines for the privacy level you enabled at the time."
+                // Build embed.
                 const embed = new EmbedBuilder()
                     .setColor(color)
-                    .setAuthor({name: `Tracking enabled for ${interaction.member.displayName}.`, iconURL: interaction.user.displayAvatarURL()})
-                    .setDescription("Tracking is disabled by default, and may be disabled at any time by the user. This bot does not track users who have not manually enabled tracking themselves. We make no guarantees about data collected when a user has enabled tracking for themselves, that data may be retained for an indefinite period, but no further data will be collected if the user disables tracking.")
-                    .setTimestamp()
+                    .setTitle("Activity Tracking Privacy:")
+                    .setDescription("By default, all tracking is disabled for users. Users have full control of their privacy when it comes to activity tracking using Bot*, and when activity tracking is disabled we collect and store no data about your user actitivty. In order for activity tracking to function, the bot must store information about your statuses. When your status updates (for example, when you turn off your computer and Discord changes your status from `online` to `offline`), if you have activity tracking enabled we log that change. This data allows us to displays statistics about your Discord activity. Below is detailed information about what information we collect and when.")
+                    .addFields(
+                        {name: "Setting - Public:", value: `${publicStore}\n__"Who can view my data?":__\nWhen set to public, anyone who shares a server with you can check your activity tracking history. When checking your history the message will be visible to any user who has access to the channel the command is run in.`},
+                        {name: "Setting - Private:", value: `${publicStore}\n__"Who can view my data?":__\nWhen set to private, only you may check your own activity tracking history. When checking your history the message will only be visible to you.`},
+                        {name: "Setting - Disabled:", value: `${privateStore}\n__"Who can view my data?":__\nWhen disabled, only you may check your own activity tracking history. No new data will be collected or displayed, but if you have existing history you didn't clear when you disabled tracking you may still view that data. When checking your history the message will only be visible to you.`},
+                        {name: "Removing Data:", value: `If you have existing tracking data you would like to remove you can run the \`activitytracking clear\` command. This command will **permanently** remove any tracking history we have of your account.`}
+                    )
                 await interaction.reply({embeds: [embed]});
-            // Disable tracking subcommand.
-            } else if (interaction.options.getSubcommand() === "disable") {
-                // Disable tracking for this user in the database.
+            // Set privacy command.    
+            } else if (interaction.options.getSubcommand() == "set") {
+                var privacy = interaction.options.getString("options");
+                // SQL queries.
+                var setTrackingQuery = fs.readFileSync(path.join(ROOT_PATH, CONFIG.queries.setUserTracking), 'utf8');
+                var addTrackingQuery = fs.readFileSync(path.join(ROOT_PATH, CONFIG.queries.insertUser), 'utf8');
+                // Update user tracking in DB.
                 if (user) {
-                    await db.run(toggleTrackingQuery, 0, interaction.user.id);
-                    await db.close();
+                    await db.run(setTrackingQuery, privacy, interaction.user.id);
                 } else {
-                    await db.close();
+                    await db.run(addTrackingQuery, interaction.user.id, privacy);
                 }
-                // Remove user from the list of currently tracked users.
-                client.activityTrackedUsers = client.activityTrackedUsers.filter(id => id != interaction.user.id);
-                // Send reply message.
+                await db.close();
+                // Update cache to reflect tracking status.
+                if (privacy == "disabled") {
+                    client.activityTrackedUsers = client.activityTrackedUsers.filter(id => id != interaction.user.id);
+                } else {
+                    client.activityTrackedUsers.push(interaction.user.id);
+                }
+                // Send confirmation message.
                 const embed = new EmbedBuilder()
                     .setColor(color)
-                    .setAuthor({name: `Tracking disabled for ${interaction.member.displayName}.`, iconURL: interaction.user.displayAvatarURL()})
-                    .setDescription("Tracking is disabled by default, and may be disabled at any time by the user. This bot does not track users who have not manually enabled tracking themselves. We make no guarantees about data collected when a user has enabled tracking for themselves, that data may be retained for an indefinite period, but no further data will be collected if the user disables tracking.")
+                    .setAuthor({name: `Tracking updated for ${interaction.member.displayName}.`, iconURL: interaction.user.displayAvatarURL()})
+                    .setDescription(`Tracking Privacy: \`${privacy[0].toUpperCase()}${privacy.slice(1)}\`\nTracking is disabled by default, and may be disabled at any time by the user. This bot does not track users who have not manually enabled tracking themselves. We make no guarantees about data collected when a user has enabled tracking for themselves, that data may be retained for an indefinite period, but no further data will be collected if the user disables tracking.`)
                     .setTimestamp()
                 await interaction.reply({embeds: [embed]});
             }
