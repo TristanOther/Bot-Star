@@ -1,0 +1,1 @@
+SELECT rowid, cstarter FROM conversation_starters ORDER BY RANDOM() LIMIT 1;

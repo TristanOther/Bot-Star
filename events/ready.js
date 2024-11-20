@@ -27,12 +27,15 @@ module.exports = {
 		var creationQuery = fs.readFileSync(path.join(ROOT_PATH, CONFIG.queries.createTables), 'utf8');
 		var trackedQuery = fs.readFileSync(path.join(ROOT_PATH, CONFIG.queries.getTrackedUsers), 'utf8');
 		var counterQuery = fs.readFileSync(path.join(ROOT_PATH, CONFIG.queries.getAllCounters), 'utf8');
+		var cleanupActivityLogs = fs.readFileSync(path.join(ROOT_PATH, CONFIG.queries.cleanupActivityLogs), 'utf8');
 		// Initialize tables.
 		await db.exec(creationQuery);
 		// Get tracked users.
 		var users = await db.all(trackedQuery);
 		client.activityTrackedUsers = users.map(obj => obj.user_id);
-		client.userUpdates = {};
+		client.lastPresenceUpdates = {};
+		// Clean up activity logs.
+		await db.run(cleanupActivityLogs);
 		// Get and refresh counters.
 		var counters = await db.all(counterQuery);
 		client.counters = {};

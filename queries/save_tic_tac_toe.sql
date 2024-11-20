@@ -1,0 +1,1 @@
+INSERT INTO tic_tac_toe(challenger, challenged, first_player, board_state) VALUES(?, ?, ?, ?);

@@ -1,0 +1,1 @@
+SELECT timezone FROM users WHERE user_id = ?;

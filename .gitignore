@@ -1,6 +1,7 @@
 # Sensitive data.
 credentials.cfg
 bot_star.db
+db_backups/
 
 # Unused code.
 scrap/

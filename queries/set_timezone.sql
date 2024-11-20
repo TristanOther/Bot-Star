@@ -1,0 +1,1 @@
+UPDATE users SET timezone = ? WHERE user_id = ?;

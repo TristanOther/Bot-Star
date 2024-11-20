@@ -1,0 +1,1 @@
+SELECT * FROM role_selectors WHERE rowid = ?;

@@ -1,0 +1,1 @@
+INSERT INTO conversation_starters(cstarter, user_id, username, timestamp) VALUES (?, ?, ?, ?);

@@ -26,6 +26,7 @@ class Image {
     // Class variables.
     canvas;
     context;
+    curHeight = 0;
 
     /*
     *   Constructor for an Image.
@@ -51,7 +52,10 @@ class Image {
         // Color in background.
         await this.drawRectangle(0, 0, this.canvas.width, this.canvas.height, bgColor);
         // If border is specified...
-        if (bColor) await this.drawRectangle(0, 0, this.canvas.width, this.canvas.height, bColor, bThickness);
+        if (bColor) {
+            await this.drawRectangle(0, 0, this.canvas.width, this.canvas.height, bColor, bThickness);
+            this.curHeight += bThickness;
+        }
     }
 
     /*
@@ -91,9 +95,9 @@ class Image {
     *   @PARAM {integer} w - the width of the pill.
     *   @PARAM {integer} h - the height of the pill.
     *   @PARAM {string} color - a hex code color to draw the pill in.
-    *   @PARAM {boolean} horizontal - whether the pill body should be horizontal or vertical (default = false).
     */
-    async drawPillBody(x, y, w, h, color, horizontal = false) {
+    async drawPillBody(x, y, w, h, color) {
+        const horizontal = w > h;
         // Save the current context.
         this.context.save();
         // Set the color.
@@ -230,7 +234,7 @@ class Image {
     *   Sets this context to the appropriate font size for the text you want to draw.
     *   @PARAM {string} text - the text that's going to be drawn.
     *   @PARAM {integer} maxWidth - the maximum width your text should take up (in pixels).
-    *   @PARAM {integer} maxHeight - the maximum height your text should take up (in pixels) (default = 201 (larger than the max this function generates)).
+    *   @PARAM {integer} maxHeight - the maximum height your text should take up (in pixels) (default = 201 (larger than the max this function generates as bounded by fontsize)).
     *   @RETURN - None.
     */
     async sizeText(text, maxWidth, maxHeight = 201) {
@@ -260,10 +264,12 @@ class Image {
     *   @PARAM {integer} y - y coordinate to place text (top left corner).
     *   @PARAM {integer} maxWidth - the maximum width the text can take up.
     *   @PARAM {string} color - the color of the text (default white).
-    *   @PARAM {boolean} autosize - whether or not to autosize the text. When off
-    *                               context management is the caller's responsibility.
+    *   @PARAM {boolean} autosize - whether or not to autosize the text. When off context
+    *                               management is the caller's responsibility (default = true).
+    *   @PARAM {boolean} addHeight - whether or not the height of this element should be added
+    *                                to the used height of the current image (default = false).
     */
-    async drawText(text, x, y, maxWidth, color = "#ffffff", autosize = true) {
+    async drawText(text, x, y, maxWidth, color = "#ffffff", autosize = true, addHeight = false) {
         // Save the current context.
         if (autosize) this.context.save();
         // Set the text color and size within the context.
@@ -271,8 +277,52 @@ class Image {
         this.context.fillStyle = color;
         // Draw the text.
         this.context.fillText(text, x, y);
+        // Add element height to current image use.
+        if (addHeight) this.curHeight += this.context.measureText(text).actualBoundingBoxDescent;
         // Restore the context from before starting.
         if (autosize) this.context.restore();
+    }
+
+    /*
+    *   drawTextWithWrap
+    *   Draws text on the canvas with word wrapping (does not support autosizing).
+    *   @PARAM {string} text - the text to draw.
+    *   @PARAM {integer} x - x coordinate to place text (top left corner).
+    *   @PARAM {integer} y - y coordinate to place text (top left corner).
+    *   @PARAM {integer} maxWidth - the maximum width the text can take up.
+    *   @PARAM {string} color - the color of the text (default white).
+    *   @PARAM {integer} fontSize - the font size to use.
+    *   @PARAM {boolean} addHeight - whether or not the height of this element should be added
+    *                                to the used height of the current image (default = false).
+    */
+    async drawTextWithWrap(text, x, y, maxWidth, color = "#ffffff", fontSize = 32, addHeight = false) {
+        this.context.save();
+
+        this.context.font = `${fontSize}px sans-serif`;
+
+        var words = text.split(" ");
+        var lines = [];
+        var currentLine = words[0];
+
+        for (var i = 1; i < words.length; i++) {
+            var word = words[i];
+            var width = this.context.measureText(currentLine + " " + word).width;
+            if (width < maxWidth) {
+                currentLine += " " + word;
+            } else {
+                lines.push(currentLine);
+                currentLine = word;
+            }
+        }
+        lines.push(currentLine);
+        
+        for (let i = 0; i < lines.length; i++) {
+            await this.drawText(lines[i], x, y + (fontSize * i), maxWidth, color, false)
+        }
+
+        if (addHeight) this.curHeight += (lines.length * fontSize);
+        
+        this.context.restore();
     }
 
     /*
@@ -321,7 +371,7 @@ class Image {
             if (activity[i]) {
                 curWidth += sectionWidth;
             } else if (curWidth > 0) {
-                await this.drawPillBody(curX, y, curWidth - spacing, h, color, true);
+                await this.drawPillBody(curX, y, curWidth - spacing, h, color);
                 curX += curWidth + sectionWidth;
                 curWidth = 0;
             } else {
@@ -332,7 +382,7 @@ class Image {
 
     /*
     *   drawLegend
-    *   Draws a status bar with the specified parameters. A status bar is a bar composed of parallel lines conveying information.
+    *   Draws legend markers for use along a visual data representation.
     *   NOTE: text will overflow slightly on either side to align with the bounding box given. Enter the height/width (vertical/horizontal legend) 
     *         of the graph you're matching.
     *   @PARAM {integer} x - the x coordinate of the legend (top left corner).
@@ -448,12 +498,12 @@ class UserCard extends Image {
     async init() {
         // Draw the background.
         const borderWidth = Math.floor(this.canvas.height * 0.05);
-        await super.setBackground("#29292e", "#202020", borderWidth);
+        await super.setBackground(COLORS.templates.main_theme, COLORS.templates.accent_theme, borderWidth);
         // Add the user's profile picture.
         if (this.member.presence) {
             await super.drawCircleImageBorder(this.member.user.displayAvatarURL(),
-                                              Math.floor(borderWidth * 1.5),
-                                              Math.floor(borderWidth * 1.5),
+                                              Math.floor(borderWidth * 2),
+                                              Math.floor(borderWidth * 2),
                                               COLORS.status[this.member.presence.status],
                                               Math.floor(borderWidth / 4),
                                               Math.floor(this.canvas.width / 800), // These scale the pfp based on the card dimensions V
@@ -470,13 +520,13 @@ class UserCard extends Image {
         // Draw the header text.
         await super.drawText(this.title,
                              Math.floor(this.canvas.width / 4.5),
-                             Math.floor(this.canvas.height / 15),
-                             Math.floor((this.canvas.width / 5) * 2));
+                             Math.floor(this.canvas.height / 6.2),
+                             Math.floor((this.canvas.width / 5) * 3));
         // Draw username.
         await super.drawText(this.member.displayName,
                              Math.floor(this.canvas.width / 4.5),
-                             Math.floor((this.canvas.height / 15) * 3),
-                             Math.floor((this.canvas.width / 5) * 3));
+                             Math.floor((this.canvas.height / 3.7)),
+                             Math.floor((this.canvas.width / 5) * 2.8));
         // Draw user ID.
         await super.drawText(`id:${this.member.id}`,
                              Math.floor((this.canvas.width / 7) * 6) - Math.floor(borderWidth / 1.5),
@@ -561,10 +611,115 @@ class UserActivityCard extends UserCard {
     }
 }
 
+// Class for image manipulation of a role selector.
+class RoleSelector extends Image {
+    /*
+    *   Constructor for a RoleSelector.
+    *   @PARAM {string} title - the title of this role selector.
+    *   @PARAM {string} description - the description of this role selector.
+    *   @PARAM {string} footer - the footer of this role selector.
+    *   @PARAM {string} color - a hex code for the accent color of this role selector.
+    *   @PARAM {obj} roles - an object containing the relevant information about roles in this selector.
+    */
+    constructor(title, description, footer, color, roles) {
+        // Use super constructor to set size for the role selector.
+        super(1000, 1000);
+        // Set class variables.
+        this.title = title;
+        this.description = description;
+        this.footer = footer;
+        this.color = color;
+        this.roles = roles;
+    }
+
+    /*
+    *   init
+    *   Initializes this RoleSelector by drawing the template.
+    *   @RETURN - None.
+    */
+    async init() {
+        // Draw the background.
+        const borderWidth = Math.floor(this.canvas.height * 0.02);
+        await super.setBackground(COLORS.templates.main_theme, this.color, borderWidth);
+
+        // Draw the title and description.
+        this.curHeight += Math.floor(this.canvas.height * 0.02) * 2; // Add top title gap.
+        let titleHeight = this.curHeight;
+        await super.drawText(this.title,
+                             Math.floor(this.canvas.width * 0.02) * 2,
+                             this.curHeight,
+                             this.canvas.width - (Math.floor(this.canvas.width * 0.02) * 4),
+                             "#ffffff",
+                            true,
+                            true);
+        titleHeight = this.curHeight - titleHeight;
+        this.curHeight += Math.floor(titleHeight / 3); // Add bottom title gap.
+        if (this.description) {
+            await super.drawTextWithWrap(this.description,
+                                         Math.floor(this.canvas.width * 0.02) * 2,
+                                         Math.floor(this.curHeight),
+                                         this.canvas.width - (Math.floor(this.canvas.width * 0.02) * 6),
+                                         "#ffffff",
+                                         Math.floor(titleHeight / 1.75),
+                                         true);
+            this.curHeight += Math.floor(titleHeight / 2); // Add bottom description gap.                          
+        }
+        // Draw roles/rolereqs/lvlreqs headers.
+        await super.drawText("Roles:",
+                             Math.floor(this.canvas.width * 0.02) * 3,
+                             Math.floor(this.curHeight),
+                             Math.floor((this.canvas.width - (Math.floor(this.canvas.width * 0.02) * 6)) / 4),
+                             "#ffffff",
+                             true,
+                             true);
+        // Get role text size.
+        const roleWidth = Math.floor((this.canvas.width - (Math.floor(this.canvas.width * 0.02) * 6)) / 3);
+        const roleHeight = Math.floor(this.canvas.height / 14);
+        var roleNames = this.roles.map(r => r.name);
+        var longestRoleName = roleNames[stringUtils.getLongestStrIndex(roleNames)];
+        this.context.save();
+        super.sizeText(longestRoleName, roleWidth * 0.9, roleHeight * 0.8);
+        // Draw roles.
+        for (const role of this.roles) {
+            this.curHeight += Math.floor(roleHeight / 2);
+            await super.drawPillBody(Math.floor(this.canvas.width * 0.02) * 3,
+                                     this.curHeight,
+                                     roleWidth,
+                                     roleHeight,
+                                     `#${role.color}`);
+            // while (this.context.measureText(text).width > maxWidth || this.context.measureText(text).actualBoundingBoxDescent > maxHeight);
+            const textWidth = this.context.measureText(role.name).width;
+            const textHeight = this.context.measureText(role.name).actualBoundingBoxDescent;
+            await super.drawText(role.name,
+                                 Math.floor(this.canvas.width * 0.02) * 3 + Math.floor((roleWidth - textWidth) / 2),
+                                 this.curHeight + Math.floor((roleHeight - textHeight) / 2),
+                                 roleWidth,
+                                 "#ffffff",
+                                 false,
+                                 false);
+            this.curHeight += roleHeight;
+        }
+        this.context.restore();
+        // Draw footer.
+        if (this.footer) {
+            this.curHeight += Math.floor(roleHeight / 2);
+            await super.drawTextWithWrap(this.footer,
+                            Math.floor(this.canvas.width * 0.02) * 3,
+                            this.curHeight,
+                            this.canvas.width - (Math.floor(this.canvas.width * 0.02) * 4),
+                            "#ffffff",
+                            Math.floor(titleHeight / 2),
+                            true);
+        }
+        // Draw selector type.
+    }
+}
+
 // Export classes.
 module.exports = {
     Image: Image,
     ColorSwatch: ColorSwatch,
     UserCard: UserCard,
     UserActivityCard: UserActivityCard,
+    RoleSelector: RoleSelector,
 };

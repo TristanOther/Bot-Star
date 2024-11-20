@@ -1,1 +1,1 @@
-INSERT INTO users(user_id, tracking_enabled) VALUES(?, ?);
+INSERT INTO users(user_id, username, tracking_enabled) VALUES(?, ?, ?);

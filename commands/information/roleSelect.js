@@ -42,6 +42,14 @@ module.exports = {
                             option.setName("name")
                                 .setDescription("A name for this selector.")
                                 .setRequired(true))
+                        .addStringOption(option =>
+                            option.setName("description")
+                                .setDescription("A description for this selector.")
+                                .setRequired(false))
+                        .addStringOption(option =>
+                            option.setName("footer")
+                                .setDescription("A footer for this selector.")
+                                .setRequired(false))
                         .addChannelOption(option => 
                             option.setName("channel")
                                 .setDescription("The channel to place this selector in (default current channel).")
@@ -51,6 +59,10 @@ module.exports = {
                                 .setDescription("A Hex color to use for the role select (e.g. #ffffff).")
                                 .setRequired(false))
                         ))
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName("refresh")
+                .setDescription("Refreshes a role selector. (WIP)"))
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     /*
@@ -93,6 +105,10 @@ module.exports = {
             } else if (interaction.options.getSubcommand() == "normal") {
                 var name = interaction.options.getString("name");
                 name = name ? name : "Role selector:";
+                var description = interaction.options.getString("description");
+                description = description ? description : false;
+                var footer = interaction.options.getString("footer");
+                footer = footer ? footer : false;
                 var channel = interaction.options.getChannel("channel");
                 channel = channel ? channel : interaction.channel;
                 var setColor = interaction.options.getString("color");
@@ -103,7 +119,7 @@ module.exports = {
                 }
 
                 const select = new RoleSelectMenuBuilder()
-                    .setCustomId("test")
+                    .setCustomId("nonConstantState.roleSelectRolePicker")
                     .setPlaceholder("Select roles...")
                     .setMinValues(1)
 			        .setMaxValues(25);
@@ -119,8 +135,8 @@ module.exports = {
                     const confirmation = await response.awaitMessageComponent({ filter: collectorFilter, time: 600_000 });
 
                     var roles = confirmation.roles;
-
-                    await roleSelectUtils.create(channel, roles, name, color);
+   
+                    await roleSelectUtils.create(channel, roles, name, description, footer, color);
 
                     await interaction.editReply({content: "**Role selector created successfully.**", components: []});
                 } catch (e) {
@@ -128,8 +144,16 @@ module.exports = {
                     await interaction.editReply({ content: '**Confirmation not received within 10 minutes, creation cancelled.**', components: [] });
                 }
 
-                // TODO: add ordering to roles (place them by role hierarchy).
             }
-        } 
+        } else if (interaction.options.getSubcommand() == "refresh") {
+            try {
+                await roleSelectUtils.refresh(interaction.guild, 1);
+                await interaction.reply({content: "**Role selector refreshed successfully.**", ephemeral: true});
+            } catch (e) {
+                console.error(e);
+                await interaction.reply({content: "**There was an error refreshing this role selector. Please ensure the selector you entered is in this server and that the message has not been deleted.**", components: [row], ephemeral: true});
+            }
+            
+        }
     }
 };

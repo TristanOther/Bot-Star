@@ -26,6 +26,7 @@
     "@napi-rs/canvas": "^0.1.52",
     "dayjs": "^1.11.11",
     "discord.js": "^14.15.2",
+    "moment-timezone": "^0.5.45",
     "pkmonjs": "^1.6.4",
     "pureimage": "^0.4.13",
     "sqlite3": "^5.1.7"

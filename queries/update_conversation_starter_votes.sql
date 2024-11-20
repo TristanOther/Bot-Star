@@ -1,0 +1,1 @@
+UPDATE conversation_starters SET good_votes = ?, bad_votes = ? WHERE rowid = ?;

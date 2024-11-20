@@ -18,10 +18,10 @@ const {SlashCommandBuilder, EmbedBuilder} = require("discord.js");
 const Image = require(path.join(ROOT_PATH, CONFIG.utils.imageUtils));
 
 
-const dayjs = require("dayjs");
+const moment = require('moment-timezone');
 
 module.exports = {
-    global: false,
+    global: true,
     // Create a slash command called `activitytracking` with subcommands `enable` and `disable`.
 	data: new SlashCommandBuilder()
 		.setName("activitytracking")
@@ -81,7 +81,7 @@ module.exports = {
             if (interaction.options.getSubcommand() == "info") {
                 // Text blurbs.
                 var publicStore = "__What we collect/store:__\n- Your Discord presence (online/away/do not disturb/offline).\n- Your status (what you're playing, custom statuses, etc.)\n- Your username, user ID, and other **public** account information.";
-                var privateStore = "__What we collect/store:__\n- We may collect and store **public** information about your account such as username and user ID. This allows us to track that you've disabled activity tracking. If you've never enabled activity tracking in the past then we won't have this data.\n- If you've previously enabled activity tracking and have't cleared your data then we retain data collected while you had tracking enabled as per the guidelines for the privacy level you enabled at the time."
+                var privateStore = "__What we collect/store:__\n- We may collect and store **public** information about your account such as username and user ID. This allows us to track that you've disabled activity tracking."
                 // Build embed.
                 const embed = new EmbedBuilder()
                     .setColor(color)
@@ -90,7 +90,7 @@ module.exports = {
                     .addFields(
                         {name: "Setting - Public:", value: `${publicStore}\n__"Who can view my data?":__\nWhen set to public, anyone who shares a server with you can check your activity tracking history. When checking your history the message will be visible to any user who has access to the channel the command is run in.`},
                         {name: "Setting - Private:", value: `${publicStore}\n__"Who can view my data?":__\nWhen set to private, only you may check your own activity tracking history. When checking your history the message will only be visible to you.`},
-                        {name: "Setting - Disabled:", value: `${privateStore}\n__"Who can view my data?":__\nWhen disabled, only you may check your own activity tracking history. No new data will be collected or displayed, but if you have existing history you didn't clear when you disabled tracking you may still view that data. When checking your history the message will only be visible to you.`},
+                        {name: "Setting - Disabled:", value: `${privateStore}\n__"Who can view my data?":__\nWhen disabled, only you may check your own activity tracking history. No new data will be collected or displayed, but if you have existing history you may still view that data. When checking your history the message will only be visible to you.`},
                         {name: "Removing Data:", value: `If you have existing tracking data you would like to remove you can run the \`activitytracking clear\` command. This command will **permanently** remove any tracking history we have of your account.`}
                     )
                 await interaction.reply({embeds: [embed]});
@@ -104,7 +104,7 @@ module.exports = {
                 if (user) {
                     await db.run(setTrackingQuery, privacy, interaction.user.id);
                 } else {
-                    await db.run(addTrackingQuery, interaction.user.id, privacy);
+                    await db.run(addTrackingQuery, interaction.user.id, interaction.user.username, privacy);
                 }
                 await db.close();
                 // Update cache to reflect tracking status.
@@ -132,8 +132,14 @@ module.exports = {
 
             // Query activity data for the specified user for the past 24 hours.
             var activity = await db.all(getActivityQuery, member.id);
+            // Get privacy setting for user.
+            var userPrivacy = await db.get(getUserQuery, member.id);
+            userPrivacy = userPrivacy ? (userPrivacy.tracking_enabled ? userPrivacy.tracking_enabled : "disabled") : "disabled";
             await db.close();
             if (!activity || activity.length <= 0) return await interaction.reply({embeds: [new EmbedBuilder().setColor(color).setDescription("No tracking data avalible for this user.")]}); //Error if no activity data.
+
+            // Error if trying to check a private user's history.
+            if (user && user.id != member.id && userPrivacy != "public") return await interaction.reply({content: "This user's activity data is private.", ephemeral: true});
 
             /*
             *   generateTimestamps
@@ -176,82 +182,87 @@ module.exports = {
                 return result;
             }
 
-            /*
-            *   generateTimes
-            *   Generates string representations of times evenly spaced across a timestamp range.
-            *   @PARAM {integer} start - the starting timestamp.
-            *   @PARAM {integer} end - the ending timestamp.
-            *   @PARAM {integer} count - how many values to generate. 
-            *   @PARAM {string} scale - the scale of the data (oneof: minutes, hours, days).
-            *   @RETURN {array} - returns a list of `count` strings representing times.
-            */
-            function generateTimes(start, end, count, scale) {
+            /**
+             * Generates string representations of times evenly spaced across a timestamp range.
+             * @param {integer} start - The starting timestamp in milliseconds.
+             * @param {integer} end - The ending timestamp in milliseconds.
+             * @param {integer} count - How many values to generate.
+             * @param {string} scale - The scale of the data (one of: 'minutes', 'hours', 'days').
+             * @param {string} timezone - The timezone to use for formatting (e.g., 'America/New_York').
+             * @return {array} - Returns a list of `count` strings representing times in the specified timezone.
+             */
+            function generateTimes(start, end, count, scale, timezone) {
                 if (count < 2) {
                     throw new Error('Count must be at least 2 to generate intervals.');
                 }
-            
+
                 if (start > end) {
                     [start, end] = [end, start]; // Swap start and end if start is greater
                 }
-            
+
                 const scales = {
                     minutes: 60 * 1000,
                     hours: 60 * 60 * 1000,
                     days: 24 * 60 * 60 * 1000
                 };
-            
+
                 const scaleMillis = scales[scale];
                 if (!scaleMillis) {
                     throw new Error(`Invalid scale: ${scale}. Valid scales are 'minutes', 'hours', 'days'.`);
                 }
-            
+
                 const duration = end - start;
                 const interval = Math.floor(duration / (count - 1)); // Round down to the nearest whole number
-            
+
                 const times = [];
-            
-                const options = {
-                    hours: { hour: 'numeric', hour12: true },
-                    days: { month: 'numeric', day: 'numeric' }
-                };
-            
-                const formatter = new Intl.DateTimeFormat('en-US', options[scale] || {});
-            
+
                 for (let i = 0; i < count; i++) {
-                    const timestamp = new Date(start + i * interval);
-                    let timeString;
-            
-                    switch (scale) {
-                        case 'minutes':
-                            timeString = formatter.format(timestamp); // Not specifically formatted as per scale
-                            break;
-                        case 'hours':
-                            timeString = formatter.format(timestamp);
-                            break;
-                        case 'days':
-                            timeString = formatter.format(timestamp);
-                            break;
-                    }
-            
+                    const timestamp = start + i * interval;
+                    const timeString = moment(timestamp).tz(timezone).format(getFormat(scale));
                     times.push(timeString);
                 }
-            
+
                 return times;
+            }
+
+            /**
+             * Returns the appropriate date/time format string based on the scale.
+             * @param {string} scale - The scale of the data (one of: 'minutes', 'hours', 'days').
+             * @return {string} - The moment.js format string.
+             */
+            function getFormat(scale) {
+                switch (scale) {
+                    case 'minutes':
+                    case 'hours':
+                        return 'hA'; // 12-hour format with AM/PM (e.g., "2PM")
+                    case 'days':
+                        return 'MMM D'; // Short date format (e.g., "Aug 21")
+                    }
             }
             
             let twoFourHourAgo = Date.now() - (24 * 60 * 60 * 1000);
             let twoFourHourAgoAdjusted = twoFourHourAgo - (twoFourHourAgo % (60 * 60 * 1000));
             let timestamps = generateTimestamps(twoFourHourAgoAdjusted, 15);
             let colors = colorTimestamps(timestamps, activity);
-            let legend = generateTimes(timestamps[0], timestamps[timestamps.length - 1], 13, "hours");
+
+            // Open connection to database.
+            await db.open();
+            var getTimezone = fs.readFileSync(path.join(ROOT_PATH, CONFIG.queries.getTimezone), 'utf8');
+            var uniAddUser = fs.readFileSync(path.join(ROOT_PATH, CONFIG.queries.uniAddUser), 'utf8');
+            await db.run(uniAddUser, member.id);
+            var timezone = await db.get(getTimezone, member.id);
+            timezone = timezone.timezone;
+            await db.close();
+            
+            let legend = generateTimes(timestamps[0], timestamps[timestamps.length - 1], 13, "hours", timezone);
 
             // Construct the activity card image.
-            var img = new Image.UserActivityCard(member, "24hr");
+            var img = new Image.UserActivityCard(member, `24hr (${timezone})`);
             await img.init(colors, legend);
             var attachment = await img.getAttachment();
 
             // Reply to the interaction.
-            await interaction.reply({files: [attachment], emphemeral: false});
+            await interaction.reply({files: [attachment], ephemeral: userPrivacy != "public"});
         }
 
     }

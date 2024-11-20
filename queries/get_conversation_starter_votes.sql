@@ -1,0 +1,1 @@
+SELECT rowid, good_votes, bad_votes FROM conversation_starters WHERE rowid = ?;

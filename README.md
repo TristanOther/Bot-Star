@@ -18,6 +18,14 @@ A TODO list for this project is included in the README both so people can see up
 - Music.
 - Ping.
 
+#### Role Selectors
+- Description add to command.
+- Footer add to command.
+- Add role descriptions.
+- Add requirement checks.
+- Have create call edit to add option for role descriptions.
+- Add button to see how many people have each role.
+
 #### Activity Tracker
 - Ensure any time a device is active within a timestamp that it is marked for that device.
 - Modify coloring to account for percent of time range that an activity takes up (might fix).
@@ -30,6 +38,7 @@ A TODO list for this project is included in the README both so people can see up
 - Do an even more custom image management system to make images more precise? (extremely low priority)
 - Add a vertical option to `drawStatusBar()` and `drawActivityBar()` for consistency. (low priority)
 - Populate the vertical option of `drawLegend()`. (low priority)
+- Change pill bodies to draw horizontal/vertical based on which dimension is longer. Square dimensions would be a circle.
 
 #### Code
 - Cleanup code in `*`.
