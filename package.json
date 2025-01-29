@@ -25,10 +25,13 @@
     "@discordjs/voice": "^0.17.0",
     "@napi-rs/canvas": "^0.1.52",
     "dayjs": "^1.11.11",
+    "discord-player": "^6.7.1",
     "discord.js": "^14.15.2",
     "moment-timezone": "^0.5.45",
     "pkmonjs": "^1.6.4",
+    "puppeteer": "^24.1.1",
     "pureimage": "^0.4.13",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "youtube-search-api": "^1.2.2"
   }
 }

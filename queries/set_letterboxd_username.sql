@@ -1,0 +1,1 @@
+UPDATE users SET letterboxd_username = ? WHERE user_id = ?;

@@ -357,15 +357,18 @@ class Image {
     *   @PARAM {integer} h - the height of the activity bar (caller handles determinig adequate height).
     *   @PARAM {array} activity - an array of boolean values indicating if a section is active
     *   @PARAM {string} color - a hex code for the color of the bar.
+    *   @PARAM {string} bgColor - a hex code for the background color of the bar.
     *   @PARAM {integer} spacing - an optional parameter for the spacing of the loading bar this activity bar corresponds to. 
     *                              Adjusts so there's no extra length on the end of drawn segments (default = 0).
     */
-    async drawActivityBar(x, y, w, h, activity, color, spacing = 0) {
+    async drawActivityBar(x, y, w, h, activity, color, bgColor, spacing = 0) {
         // Preliminary maths.
         const sectionWidth = Math.floor(w / activity.length);
         var curX = x;
         var curWidth = 0;
         activity.push(0); // Add an extra false value so the last bar gets drawn without duplicate code.
+        // Draw background bar.
+        await this.drawPillBody(curX, y, w - spacing, h, bgColor);
         // Draw bar.
         for (let i = 0; i <= activity.length; i++) {
             if (activity[i]) {
@@ -577,6 +580,7 @@ class UserActivityCard extends UserCard {
                                    actBarHeight,
                                    webActivity,
                                    COLORS.templates.activity,
+                                   COLORS.templates.accent_theme,
                                    segmentSpacing);
         await this.drawImage(CONFIG.images.wbActIcn,
                              barShift - Math.floor(actBarHeight * 6),
@@ -589,6 +593,7 @@ class UserActivityCard extends UserCard {
                                    actBarHeight,
                                    desktopActivity,
                                    COLORS.templates.activity,
+                                   COLORS.templates.accent_theme,
                                    segmentSpacing);
         await this.drawImage(CONFIG.images.dsktpActIcn,
                              barShift - Math.floor(actBarHeight * 6),
@@ -601,6 +606,7 @@ class UserActivityCard extends UserCard {
                                    actBarHeight,
                                    mobileActivity,
                                    COLORS.templates.activity,
+                                   COLORS.templates.accent_theme,
                                    segmentSpacing);
         await this.drawImage(CONFIG.images.mblActIcn,
                              barShift - Math.floor(actBarHeight * 6),

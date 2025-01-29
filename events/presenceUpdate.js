@@ -29,6 +29,7 @@ module.exports = {
 		var devices = newPresence.clientStatus ? Object.keys(newPresence.clientStatus) : [];
 		// Get the user's status.
 		var status = newPresence.activities.length > 0 ? newPresence.activities[0].state : "N/A";
+		if (status == '') status = "N/A";
 
 		// Load SQL queries.
 		var logActivityQuery = fs.readFileSync(path.join(ROOT_PATH, CONFIG.queries.logActivity), 'utf8');

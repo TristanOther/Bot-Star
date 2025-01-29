@@ -2,13 +2,15 @@ CREATE TABLE IF NOT EXISTS users(
     user_id TEXT PRIMARY KEY UNIQUE,
     tracking_enabled TEXT NOT NULL CHECK(tracking_enabled IN ("public", "private", "disabled")),
     cstarter_good_votes INTEGER NOT NULL DEFAULT 0,
-    cstarter_bad_votes INTEGER NOT NULL DEFAULT 0
+    cstarter_bad_votes INTEGER NOT NULL DEFAULT 0,
+    timezone TEXT NOT NULL DEFAULT "US/Eastern",
+    letterboxd_username TEXT
 );
 
 CREATE TABLE IF NOT EXISTS activity_logs(
     user_id TEXT NOT NULL,
     presence TEXT NOT NULL CHECK(presence = "online" OR presence = "idle" OR presence = "dnd" OR presence = "offline"),
-    status TEXT NOT NULL,
+    status TEXT,
     timestamp INTEGER NOT NULL,
     mobile BOOLEAN NOT NULL CHECK(mobile IN (0, 1)),
     desktop BOOLEAN NOT NULL CHECK(desktop IN (0, 1)),
